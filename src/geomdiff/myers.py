@@ -1,6 +1,12 @@
-from collections.abc import Hashable, Sequence
 from itertools import chain
-from typing import Iterable, Literal
+from typing import Iterable, Literal, Sequence, Tuple
+
+from shapely import LineString
+
+EditCommand = (
+    tuple[int, Literal["insert"], Tuple[float, float]] | tuple[int, Literal["delete"]]
+)
+Diff = Iterable[EditCommand]
 
 
 def myers_length_of_shortest_edit_script(a, b):
@@ -35,8 +41,6 @@ def myers_length_of_shortest_edit_script(a, b):
                 # the furthest reaching path in diagonal above
                 x = v[k + 1]
             else:
-                # TODO:
-                #
                 # Otherwise k==D or the x index of the furthest reaching D-path
                 # on the diagonal below is greater or equal to the furthest reaching
                 # path on the diagonal above. The result is that we start from the furthest
@@ -53,91 +57,8 @@ def myers_length_of_shortest_edit_script(a, b):
     raise RuntimeError("Should not reach this point")
 
 
-EditCommand = tuple[int, Literal["insert"], Hashable] | tuple[int, Literal["delete"]]
-Diff = Iterable[EditCommand]
-
-
-def diff(a: Sequence[Hashable], b: Sequence[Hashable]):
-    """Calculate a diff between sequences 'a' and 'b'
-
-    Another word for 'diff' is an edit script that transforms sequence _a_ to
-    sequence _b_.
-
-    Parameters
-    ----------
-    a, b : Sequence of Hashable type
-        Sequences of hashable elements. Hashable because elements needs to
-        be comparable.
-
-    Returns
-    -------
-    Diff
-        The return value is an iterable object of insert/delete edit commands.
-
-    """
-    return _diff(a, b, 0, 0)
-
-
-def _diff(a: Sequence[Hashable], b: Sequence[Hashable], cur_x: int, cur_y: int) -> Diff:
-    """
-    Calculate a diff between sequences 'a' and 'b'
-
-    Another word for 'diff' is an edit script that transforms sequence _a_ to
-    sequence _b_.
-
-    Parameters
-    ----------
-    a, b : Sequence of Hashable type
-        Sequences of hashable elements. Hashable because elements needs to
-        be comparable.
-    cur_x, cur_y : int
-        Current x and y indexes of original a and b sequences. Lets us
-        use dynamic programming.
-
-    Returns
-    -------
-    Diffs
-        The return value is an iterable object of insert/delete edit commands.
-
-    Notes
-    -----
-    Some notes referencing [1]_.
-
-    References
-    ----------
-    .. [1] Myers. "An O(ND) Difference Algorithm and Its Variations"
-    """
-    # Type guard
-    if a is None or b is None:
-        raise TypeError("None input")
-
-    N = len(a)
-    M = len(b)
-    # Check equality
-    if a == b:
-        return iter([])
-
-    if N == 0:
-        # Correct for 1-indexed edit graph
-        index = cur_x - 1
-        return iter((index, "insert", l) for l in b)
-
-    if M == 0:
-        return iter((i + cur_x, "delete") for i in range(0, len(a)))
-
-    D, x, y, u, v = _find_middle_snake(a, b, N, M)
-    if D > 1 or (x != u and y != v):
-        diff1 = _diff(a[:u], b[:v], cur_x, cur_y)
-        diff2 = _diff(a[x:], b[y:], cur_x + x, cur_y + y)
-        return chain(diff1, diff2)
-    elif M > N:
-        return iter(((N - 1) + cur_x, "insert", l) for l in b[N:M])
-    else:
-        return iter((i + cur_x, "delete") for i in range(M, N))
-
-
 def _find_middle_snake(
-    a: Sequence[Hashable], b: Sequence[Hashable], N: int, M: int
+    a: Sequence, b: Sequence, N: int, M: int
 ) -> tuple[int, int, int, int, int]:
     max_D = (M + N + 1) // 2
     delta = N - M
@@ -217,3 +138,91 @@ def _find_middle_snake(
                     return D_res, x, y, u, v
 
     raise RuntimeError("Should not reach this code")
+
+
+def _diff(a: Sequence, b: Sequence, cur_x: int, cur_y: int) -> Diff:
+    """
+    Calculate a diff between sequences 'a' and 'b'
+
+    Another word for 'diff' is an edit script that transforms sequence _a_ to
+    sequence _b_.
+
+    Parameters
+    ----------
+    a, b : Sequence of Hashable type
+        Sequences of hashable elements. Hashable because elements needs to
+        be comparable.
+    cur_x, cur_y : int
+        Current x and y indexes of original a and b sequences. Lets us
+        use dynamic programming.
+
+    Returns
+    -------
+    Diffs
+        The return value is an iterable object of insert/delete edit commands.
+
+    Notes
+    -----
+    Some notes referencing [1]_.
+
+    References
+    ----------
+    .. [1] Myers. "An O(ND) Difference Algorithm and Its Variations"
+    """
+    # Type guard
+    if a is None or b is None:
+        raise TypeError("None input")
+
+    # Check equality
+    if a == b:
+        return iter([])
+
+    N = len(a)
+    M = len(b)
+    if N == 0:
+        # Correct for 1-indexed edit graph
+        index = cur_x - 1
+        return iter((index, "insert", l) for l in b)
+
+    if M == 0:
+        return iter((i + cur_x, "delete") for i in range(0, N))
+
+    D, x, y, u, v = _find_middle_snake(a, b, N, M)
+    if D > 1 or (x != u and y != v):
+        diff1 = _diff(
+            a[:u],
+            b[:v],
+            cur_x,
+            cur_y,
+        )  # type : ignore
+        diff2 = _diff(a[x:], b[y:], cur_x + x, cur_y + y)  # type : ignore
+        return chain(diff1, diff2)
+    elif M > N:
+        return iter(((N - 1) + cur_x, "insert", l) for l in b[N:M])
+    else:
+        return iter((i + cur_x, "delete") for i in range(M, N))
+
+
+def diff(a: LineString, b: LineString) -> Diff:
+    """Calculate a diff between sequences 'a' and 'b'
+
+    Another word for 'diff' is an edit script that transforms sequence _a_ to
+    sequence _b_.
+
+    Parameters
+    ----------
+    a, b : Sequence of Hashable type
+        Sequences of hashable elements. Hashable because elements needs to
+        be comparable.
+
+    Returns
+    -------
+    Diff
+        The return value is an iterable object of insert/delete edit commands.
+
+    """
+    if not isinstance(a, LineString) or not isinstance(b, LineString):
+        raise TypeError("Input must be LineString")
+    seq1 = list(a.coords)
+    seq2 = list(b.coords)
+    return _diff(seq1, seq2, 0, 0)

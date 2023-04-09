@@ -1,10 +1,9 @@
-from collections.abc import Sequence
-from typing import Dict, Hashable, NamedTuple
+from typing import NamedTuple
 
 import pytest
 from shapely import LineString, Point
 
-from geomdiff.myers import Diff, diff, myers_length_of_shortest_edit_script
+from geomdiff.myers import Diff, _diff
 
 
 class Expected(NamedTuple):
@@ -15,8 +14,8 @@ class Expected(NamedTuple):
 class Scenario(NamedTuple):
     name: str
     id: int
-    seq_1: Sequence[Hashable]
-    seq_2: Sequence[Hashable]
+    ls1: LineString | Point | None
+    ls2: LineString | Point | None
     expected: Expected
 
 
@@ -24,102 +23,106 @@ def idfn(val):
     return val.name
 
 
-class TestMyersStrings:
-    def test_NoneInput_raisesTypeError(self):
-        with pytest.raises(TypeError):
-            diff(None, [])
-        with pytest.raises(TypeError):
-            diff([], None)
-        with pytest.raises(TypeError):
-            diff(None, None)
-
+class TestMyersLineString:
     scenarios = [
-        (Scenario("2 empty strings", 1, "", "", Expected(0, []))),
+        (Scenario("2 empty sequences", 1, None, None, Expected(0, []))),
         (
             Scenario(
-                "single char and empty string", 2, "a", "", Expected(1, [(0, "delete")])
+                "single point and empty sequence",
+                2,
+                Point(0, 0),
+                None,
+                Expected(1, [(0, "delete")]),
             )
         ),
         (
             Scenario(
-                "empty string and single char",
+                "empty seq and single point",
                 3,
-                "",
-                "a",
-                Expected(1, [(-1, "insert", "a")]),
+                None,
+                Point(0, 0),
+                Expected(1, [(-1, "insert", (0, 0))]),
             )
         ),
-        (Scenario("two equal chars", 4, "a", "a", Expected(0, []))),
+        (Scenario("two equal points", 4, Point(1, 1), Point(1, 1), Expected(0, []))),
         (
             Scenario(
-                "2 different single chars",
+                "2 different single points",
                 5,
-                "a",
-                "b",
-                Expected(2, [(0, "delete"), (0, "insert", "b")]),
+                Point(1, 1),
+                Point(2, 2),
+                Expected(2, [(0, "delete"), (0, "insert", (2, 2))]),
             )
         ),
         (
             Scenario(
-                "remove first char 2-string", 6, "ab", "b", Expected(1, [(0, "delete")])
+                "remove first point 2-string",
+                6,
+                LineString([(1, 1), (2, 2)]),
+                Point(2, 2),
+                Expected(1, [(0, "delete")]),
             )
         ),
         (
             Scenario(
-                "remove last char 2-string", 7, "ab", "a", Expected(1, [(1, "delete")])
+                "remove last point 2-string",
+                7,
+                LineString([(1, 1), (2, 2)]),
+                Point(1, 1),
+                Expected(1, [(1, "delete")]),
             )
         ),
         (
             Scenario(
-                "add char in front 1-string",
+                "add point in front",
                 8,
-                "b",
-                "ab",
-                Expected(1, [(-1, "insert", "a")]),
+                Point(2, 2),
+                LineString([(1, 1), (2, 2)]),
+                Expected(1, [(-1, "insert", (1, 1))]),
             )
         ),
         (
             Scenario(
-                "add char at back 1-string",
+                "add point at back",
                 9,
-                "a",
-                "ab",
-                Expected(1, [(0, "insert", "b")]),
+                Point(1, 1),
+                LineString([(1, 1), (2, 2)]),
+                Expected(1, [(0, "insert", (2.0, 2.0))]),
             )
         ),
         (
             Scenario(
-                "change last char",
+                "change first point",
                 10,
-                "ab",
-                "ac",
-                Expected(2, [(1, "delete"), (1, "insert", "c")]),
+                LineString([(1, 1), (2, 2)]),
+                LineString([(3, 3), (2, 2)]),
+                Expected(2, [(0, "delete"), (0, "insert", (3, 3))]),
             )
         ),
         (
             Scenario(
-                "example from article",
+                "change last point",
                 11,
-                "abcabba",
-                "cbabac",
-                Expected(
-                    5,
-                    [
-                        (0, "delete"),
-                        (0, "insert", "c"),
-                        (2, "delete"),
-                        (5, "delete"),
-                        (6, "insert", "c"),
-                    ],
-                ),
+                LineString([(1, 1), (2, 2)]),
+                LineString([(1, 1), (3, 3)]),
+                Expected(2, [(1, "delete"), (1, "insert", (3, 3))]),
             )
         ),
     ]
 
     @pytest.mark.parametrize(argnames="scenario", argvalues=scenarios, ids=idfn)
     def test_scenarios(self, scenario: Scenario):
-        res = list(diff(scenario.seq_1, scenario.seq_2))
+        ls1 = scenario.ls1
+        ls2 = scenario.ls2
+        seq1 = []
+        seq2 = []
+        if ls1 is not None:
+            seq1 = list(ls1.coords)
+        if ls2 is not None:
+            seq2 = list(ls2.coords)
+        res = list(_diff(seq1, seq2, 0, 0))
         assert res is not None
         assert len(res) == scenario.expected.edit_length
+        expected_script = list(scenario.expected.edit_script)
         for i, command in enumerate(res):
-            assert command == scenario.expected.edit_script[i]
+            assert command == expected_script[i]
