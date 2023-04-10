@@ -108,6 +108,24 @@ class TestMyersLineString:
                 Expected(2, [(1, "delete"), (1, "insert", (3, 3))]),
             )
         ),
+        (
+            Scenario(
+                "delete middle point",
+                12,
+                LineString([(1, 1), (2, 2), (3, 3)]),
+                LineString([(1, 1), (3, 3)]),
+                Expected(1, [(1, "delete")]),
+            )
+        ),
+        (
+            Scenario(
+                "change middle point",
+                13,
+                LineString([(1, 1), (2, 2), (3, 3)]),
+                LineString([(1, 1), (4, 4), (3, 3)]),
+                Expected(2, [(1, "delete"), (1, "insert", (4, 4))]),
+            )
+        ),
     ]
 
     @pytest.mark.parametrize(argnames="scenario", argvalues=scenarios, ids=idfn)
