@@ -126,6 +126,24 @@ class TestMyersLineString:
                 Expected(2, [(1, "delete"), (1, "insert", (4, 4))]),
             )
         ),
+        (
+            Scenario(
+                "abcabba -> cbabac",
+                14,
+                LineString([(1, 1), (2, 2), (3, 3), (1, 1), (2, 2), (2, 2), (1, 1)]),
+                LineString([(3, 3), (2, 2), (1, 1), (2, 2), (1, 1), (3, 3)]),
+                Expected(
+                    5,
+                    [
+                        (0, "delete"),
+                        (0, "insert", (3, 3)),
+                        (2, "delete"),
+                        (5, "delete"),
+                        (6, "insert", (3, 3)),
+                    ],
+                ),
+            )
+        ),
     ]
 
     @pytest.mark.parametrize(argnames="scenario", argvalues=scenarios, ids=idfn)
