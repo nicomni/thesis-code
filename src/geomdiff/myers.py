@@ -85,26 +85,26 @@ def _find_middle_snake(
     vb = vf[:]  # copy vf to initialize vector for reverse paths
     # By lemma 1 and 3 of [1] check for overlap only in forward direction
     # if delta is odd
-    check_forward = delta % 2 != 0
+    check_forward = delta % 2 == 1
     for D in range(0, max_D + 1):
         # Optimization: tighter bounds on diagonals that we search
         # A D-path will be off the bottom of the edit grid if k is lower
         # than kfstart, and off the right of the grid if k is higher than
         # kfend. Credit: Robert Elder
-        kstart = -(D - 2 * max(0, D - M))
-        kend = D - 2 * max(0, D - N)
+        kstart = -(D - 2 * max(0, D - M))  # inclusive
+        kend = D - 2 * max(0, D - N) + 1  # exclusive
         # Make a step in forward search path
-        for kf in range(kstart, kend + 1, 2):
+        for kf in range(kstart, kend, 2):
             # Find the end of the furthest reaching forward D-path in diagonal kf
-            if kf == kstart or (kf != kend and vf[kf - 1] < vf[kf + 1]):
+            if kf == -D or (kf != D and vf[kf - 1] < vf[kf + 1]):
                 xf = vf[kf + 1]
             else:
                 xf = vf[kf - 1] + 1
             yf = xf - kf
 
             # Record snake start. Ref (u,v) in [1]
-            u = xf
-            v = yf
+            x = xf
+            y = yf
             while xf < N and yf < M and a[xf] == b[yf]:
                 xf += 1
                 yf += 1
@@ -113,7 +113,7 @@ def _find_middle_snake(
             # forwards if delta is odd.
             # Also, there needs to be an oposing path in the same diagonal. This is
             # true only if k ∈ [𝚫 - (D-1), 𝚫 + (D-1)]
-            if check_forward and kf >= delta - (D - 1) and kf <= delta + (D - 1):
+            if check_forward and delta - (D - 1) <= kf <= delta + (D - 1):
                 # kb is the diagonal index of the diagonal in the backwards
                 # edit graph. Thus, kf in the forwards direction signifies the
                 # same diagonal as kb in the backwards direction. An overlap happens
@@ -125,13 +125,13 @@ def _find_middle_snake(
                 if xb <= xf:
                     # Overlap found
                     # Record snake end. Ref. (x,y) in [1]
-                    x = xf
-                    y = yf
+                    u = xf
+                    v = yf
                     D_res = 2 * D - 1
                     return D_res, x, y, u, v
         # Do one step in backwards path
-        for kb in range(kstart, kend + 1, 2):
-            if kb == kstart or (kb != kend and vb[kb - 1] < vb[kb + 1]):
+        for kb in range(kstart, kend, 2):
+            if kb == -D or (kb != D and vb[kb - 1] < vb[kb + 1]):
                 xb = vb[kb + 1]
             else:
                 xb = vb[kb - 1] + 1
@@ -144,7 +144,7 @@ def _find_middle_snake(
                 yb += 1
             vb[kb] = xb
 
-            if not check_forward and -D <= kb + delta <= D:
+            if not check_forward and -D <= kb - delta <= D:
                 kf = delta - kb
                 xf = vf[kf]
                 if xf >= N - xb:
