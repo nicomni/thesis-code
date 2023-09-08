@@ -4,9 +4,10 @@ from typing import Iterable, Literal, Sequence, Tuple
 from shapely import LineString
 
 EditCommand = (
-    tuple[int, Literal["insert"], Tuple[float, float]] | tuple[int, Literal["delete"]]
+    tuple[int, Literal["insert"] | Literal["change"], Tuple[float, float]]
+    | tuple[int, Literal["delete"]]
 )
-Diff = Iterable[EditCommand]
+Diff = Sequence[EditCommand]
 
 
 def myers_length_of_shortest_edit_script(a, b):
