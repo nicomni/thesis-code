@@ -3,6 +3,8 @@ from typing import Iterable, Literal, Sequence, Tuple
 
 from shapely import LineString
 
+# TODO: Write documentation for Myers method.
+
 EditCommand = (
     tuple[int, Literal["insert"] | Literal["change"], Tuple[float, float]]
     | tuple[int, Literal["delete"]]
@@ -58,9 +60,23 @@ def myers_length_of_shortest_edit_script(a, b):
     raise RuntimeError("Should not reach this point")
 
 
+# TODO: Complete docstring for D
 def _find_middle_snake(
     a: Sequence, b: Sequence, N: int, M: int
 ) -> tuple[int, int, int, int, int]:
+    """Find the middle snake
+
+    In an edit graph, a _snake_ is a non-diagonal edge followed by a possibly
+    empty sequence of diagonal edges.
+
+    Returns
+    -------
+    D, x, y, u, v : int
+        Such that the middle snakes starts at (x,y) and ends at (u,v)
+        in the edit graph. D is ...
+
+
+    """
     max_D = (M + N + 1) // 2
     delta = N - M
     # row indexes for furthest reaching path in forward search
