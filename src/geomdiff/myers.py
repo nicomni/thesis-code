@@ -176,32 +176,32 @@ def _diff(a: Sequence, b: Sequence, cur_x: int, cur_y: int) -> Diff:
 
     # Check equality
     if a == b:
-        return iter([])
+        return []
 
     N = len(a)
     M = len(b)
     if N == 0:
-        # Correct for 1-indexed edit graph
-        index = cur_x - 1
-        return iter((index, "insert", l) for l in b)
+        index = cur_x - 1 # insert in front of current index
+        return [(index, "insert", l) for l in b]
 
     if M == 0:
-        return iter((i + cur_x, "delete") for i in range(0, N))
+        return [(i + cur_x, "delete") for i in range(0, N)]
 
     D, x, y, u, v = _find_middle_snake(a, b, N, M)
     if D > 1 or (x != u and y != v):
         diff1 = _diff(
-            a[:u],
-            b[:v],
+            a[:x],
+            b[:y],
             cur_x,
             cur_y,
         )  # type : ignore
-        diff2 = _diff(a[x:], b[y:], cur_x + x, cur_y + y)  # type : ignore
-        return chain(diff1, diff2)
+        diff2 = _diff(a[u:], b[v:], cur_x + u, cur_y + v)  # type : ignore
+        res = list(chain.from_iterable([diff1, diff2]))
+        return res
     elif M > N:
-        return iter(((N - 1) + cur_x, "insert", l) for l in b[N:M])
+        return [((N - 1) + cur_x, "insert", l) for l in b[N:M]]
     else:
-        return iter((i + cur_x, "delete") for i in range(M, N))
+        return [(i + cur_x, "delete") for i in range(M, N)]
 
 
 def diff(a: LineString, b: LineString) -> Diff:
