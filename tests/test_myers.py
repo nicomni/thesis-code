@@ -3,8 +3,6 @@ import pytest
 
 import geomdiff.myers as geomdiff
 
-# TODO: Use fixtures/scenarios
-
 # TESTS for _find_middle_snake
 
 

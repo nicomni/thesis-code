@@ -1,15 +1,19 @@
 from itertools import chain
-from typing import Iterable, Literal, Sequence, Tuple
+from typing import Literal, Sequence, TypeGuard
 
 from shapely import LineString
 
 # TODO: Write documentation for Myers method.
 
-EditCommand = (
-    tuple[int, Literal["insert"] | Literal["change"], Tuple[float, float]]
-    | tuple[int, Literal["delete"]]
-)
-Diff = Sequence[EditCommand]
+Point = tuple[float, float]
+InsertCommand = tuple[int, Literal["insert"], Point]
+DeleteCommand = tuple[int, Literal["delete"]]
+ChangeCommand = tuple[int, Literal["change"], Point]
+EditCommand = InsertCommand | DeleteCommand
+PatchCommand = EditCommand | ChangeCommand
+EditScript = Sequence[EditCommand]
+Patch = Sequence[PatchCommand]
+PointSequence = Sequence[Point]
 
 
 def myers_length_of_shortest_edit_script(a, b):
@@ -62,7 +66,7 @@ def myers_length_of_shortest_edit_script(a, b):
 
 # TODO: Complete docstring for D
 def _find_middle_snake(
-    a: Sequence, b: Sequence, N: int, M: int
+    a: PointSequence, b: PointSequence, N: int, M: int
 ) -> tuple[int, int, int, int, int]:
     """Find the middle snake
 
@@ -157,7 +161,9 @@ def _find_middle_snake(
     raise RuntimeError("Should not reach this code")
 
 
-def _diff(a: Sequence, b: Sequence, cur_x: int, cur_y: int) -> Diff:
+def _shortest_edit_script(
+    a: PointSequence, b: PointSequence, cur_x: int, cur_y: int
+) -> EditScript:
     """
     Calculate a diff between sequences 'a' and 'b'
 
@@ -166,8 +172,8 @@ def _diff(a: Sequence, b: Sequence, cur_x: int, cur_y: int) -> Diff:
 
     Parameters
     ----------
-    a, b : Sequence of Hashable type
-        Sequences of hashable elements. Hashable because elements needs to
+    a, b :PointSequence of Hashable type
+       PointSequences of hashable elements. Hashable because elements needs to
         be comparable.
     cur_x, cur_y : int
         Current x and y indexes of original a and b sequences. Lets us
@@ -197,7 +203,7 @@ def _diff(a: Sequence, b: Sequence, cur_x: int, cur_y: int) -> Diff:
     N = len(a)
     M = len(b)
     if N == 0:
-        index = cur_x - 1 # insert in front of current index
+        index = cur_x - 1  # insert in front of current index
         return [(index, "insert", l) for l in b]
 
     if M == 0:
@@ -205,14 +211,14 @@ def _diff(a: Sequence, b: Sequence, cur_x: int, cur_y: int) -> Diff:
 
     D, x, y, u, v = _find_middle_snake(a, b, N, M)
     if D > 1 or (x != u and y != v):
-        diff1 = _diff(
+        diff1 = _shortest_edit_script(
             a[:x],
             b[:y],
             cur_x,
             cur_y,
-        )  # type : ignore
-        diff2 = _diff(a[u:], b[v:], cur_x + u, cur_y + v)  # type : ignore
-        res = list(chain.from_iterable([diff1, diff2]))
+        )
+        diff2 = _shortest_edit_script(a[u:], b[v:], cur_x + u, cur_y + v)
+        res = list(chain(diff1, diff2))
         return res
     elif M > N:
         return [((N - 1) + cur_x, "insert", l) for l in b[N:M]]
@@ -220,7 +226,7 @@ def _diff(a: Sequence, b: Sequence, cur_x: int, cur_y: int) -> Diff:
         return [(i + cur_x, "delete") for i in range(M, N)]
 
 
-def diff(a: LineString, b: LineString) -> Diff:
+def diff(a: LineString, b: LineString) -> Patch:
     """Calculate a diff between sequences 'a' and 'b'
 
     Another word for 'diff' is an edit script that transforms sequence _a_ to
@@ -242,4 +248,4 @@ def diff(a: LineString, b: LineString) -> Diff:
         raise TypeError("Input must be LineString")
     seq1 = list(a.coords)
     seq2 = list(b.coords)
-    return _diff(seq1, seq2, 0, 0)
+    return _shortest_edit_script(seq1,seq2, 0,0)
