@@ -1,3 +1,4 @@
+# vim: foldlevel=0
 from itertools import chain
 from typing import Literal, Sequence, TypeGuard
 
@@ -248,4 +249,116 @@ def diff(a: LineString, b: LineString) -> Patch:
         raise TypeError("Input must be LineString")
     seq1 = list(a.coords)
     seq2 = list(b.coords)
+    if not _is_point_sequence(seq1):
+        raise TypeError(f"Unexpected type {type(seq1)}. Expected PointSequence")
+    if not _is_point_sequence(seq2):
+        raise TypeError(f"Unexpected type {type(seq2)}. Expected PointSequence")
     return _shortest_edit_script(seq1,seq2, 0,0)
+    edit_script = _shortest_edit_script(seq1, seq2, 0, 0)
+    patch = _clean_up_edit_script(edit_script, seq1)
+    return patch
+
+
+# Make type guard to determine if PatchCommand is InsertCommand
+def _is_insert_command(cmd: PatchCommand) -> TypeGuard[InsertCommand]:
+    op = cmd[1]
+    if op == "insert":
+        return True
+    return False
+
+
+def _is_delete_command(cmd: PatchCommand) -> TypeGuard[DeleteCommand]:
+    op = cmd[1]
+    if op == "delete":
+        return True
+    return False
+
+
+def _is_change_command(cmd: PatchCommand) -> TypeGuard[ChangeCommand]:
+    op = cmd[1]
+    if op == "change":
+        return True
+    return False
+
+
+def _is_point_type(val: object) -> TypeGuard[Point]:
+    return (
+        isinstance(val, tuple)
+        and len(val) == 2
+        and all(isinstance(x, float) for x in val)
+    )
+
+
+def _is_point_sequence(seq: list) -> TypeGuard[PointSequence]:
+    return all(_is_point_type(x) for x in seq)
+
+
+def _clean_up_edit_script(
+    edit_script: EditScript, old_state: PointSequence 
+) -> Patch:
+    """Clean up edit script
+
+    Merge consecutive insert/delete commands into a single change command.
+    Example:
+        a = [(1,1)]
+        b = [(3,3)]
+        The edit script becomes:
+        [(0, 'delete'), (0, 'insert', (3,3))]
+        We want to return:
+        [(0, 'change', (2,2))]
+    """
+    # TODO: implement change ranges
+    # commands: list[EditCommand] = []  # to remember commands
+    patch = []  # store processed commands
+    for _, cmd in enumerate(edit_script):
+        if len(patch) == 0:
+            patch.append(cmd)
+            continue
+        prev_cmd = patch[-1]
+        if _is_insert_command(prev_cmd):
+            if _is_insert_command(cmd):
+                # TODO: Chain insert commands
+                patch.append(cmd)
+                continue
+            if _is_delete_command(cmd):
+                if cmd[0] == prev_cmd[0] + 1:
+                    # Merge insert/delete into change command
+                    old_val = old_state[cmd[0]]
+                    new_val = prev_cmd[2]
+                    change_val = (new_val[0] - old_val[0], new_val[1] - old_val[1])
+                    # Add change command to result. Replace previous insert command
+                    patch[-1] = (cmd[0], "change", change_val)
+                    continue
+                patch.append(cmd)
+        elif _is_delete_command(prev_cmd):
+            if _is_delete_command(cmd):
+                # TODO: Chain delete commands
+                patch.append(cmd)
+                continue
+            if _is_insert_command(cmd):
+                if cmd[0] == prev_cmd[0]:
+                    # Merge insert/delete into change command
+                    old_val = old_state[cmd[0]]
+                    new_val = cmd[2]
+                    change_val = (new_val[0] - old_val[0], new_val[1] - old_val[1])
+                    # Add change command to result. Replace previous delete command
+                    patch[-1] = (cmd[0], "change", change_val)
+                    continue
+                patch.append(cmd)
+        elif _is_change_command(prev_cmd):
+            patch.append(cmd)
+        else:
+            raise UnexpectedEditCommandTypeError(cmd[1])
+    return list(patch)
+
+
+# TODO: Add test for this.
+class UnexpectedEditCommandTypeError(Exception):
+    _op: str
+
+    def __init__(self, op: str):
+        self._op
+        super().__init__(op)
+
+    def __str__(self):
+        return f"Unexpected command type '{self._op}'. Expected 'insert' or 'delete'"
