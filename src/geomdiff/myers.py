@@ -253,7 +253,6 @@ def diff(a: LineString, b: LineString) -> Patch:
         raise TypeError(f"Unexpected type {type(seq1)}. Expected PointSequence")
     if not _is_point_sequence(seq2):
         raise TypeError(f"Unexpected type {type(seq2)}. Expected PointSequence")
-    return _shortest_edit_script(seq1, seq2, 0, 0)
     edit_script = _shortest_edit_script(seq1, seq2, 0, 0)
     patch = _clean_up_edit_script(edit_script, seq1)
     return patch
