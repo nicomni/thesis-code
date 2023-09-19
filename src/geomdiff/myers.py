@@ -7,9 +7,9 @@ from shapely import LineString
 # TODO: Write documentation for Myers method.
 
 Point = tuple[float, float]
-InsertCommand = tuple[int, Literal["insert"], Point]
-DeleteCommand = tuple[int, Literal["delete"]]
-ChangeCommand = tuple[int, Literal["change"], Point]
+InsertCommand = tuple[int, Literal["insert"], Point]  # (0, 'insert', (1,1))
+DeleteCommand = tuple[int, Literal["delete"]]  # (2, 'delete')
+ChangeCommand = tuple[int, Literal["change"], Point]  # (1, 'change', (3,3))
 EditCommand = InsertCommand | DeleteCommand
 PatchCommand = EditCommand | ChangeCommand
 EditScript = Sequence[EditCommand]
@@ -253,7 +253,7 @@ def diff(a: LineString, b: LineString) -> Patch:
         raise TypeError(f"Unexpected type {type(seq1)}. Expected PointSequence")
     if not _is_point_sequence(seq2):
         raise TypeError(f"Unexpected type {type(seq2)}. Expected PointSequence")
-    return _shortest_edit_script(seq1,seq2, 0,0)
+    return _shortest_edit_script(seq1, seq2, 0, 0)
     edit_script = _shortest_edit_script(seq1, seq2, 0, 0)
     patch = _clean_up_edit_script(edit_script, seq1)
     return patch
@@ -293,9 +293,7 @@ def _is_point_sequence(seq: list) -> TypeGuard[PointSequence]:
     return all(_is_point_type(x) for x in seq)
 
 
-def _clean_up_edit_script(
-    edit_script: EditScript, old_state: PointSequence 
-) -> Patch:
+def _clean_up_edit_script(edit_script: EditScript, old_state: PointSequence) -> Patch:
     """Clean up edit script
 
     Merge consecutive insert/delete commands into a single change command.
