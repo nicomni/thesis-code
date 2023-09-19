@@ -260,17 +260,17 @@ def diff(a: LineString, b: LineString) -> Patch:
 
 
 # Make type guard to determine if PatchCommand is InsertCommand
-def _is_insert_command(cmd: PatchCommand) -> TypeGuard[InsertCommand]:
-    op = cmd[1]
-    if op == "insert":
-        return True
+def _is_insert_command(cmd) -> TypeGuard[InsertCommand]:
+    if isinstance(cmd, tuple) and len(cmd) == 3:
+        op = cmd[1]
+        return op == "insert"
     return False
 
 
-def _is_delete_command(cmd: PatchCommand) -> TypeGuard[DeleteCommand]:
-    op = cmd[1]
-    if op == "delete":
-        return True
+def _is_delete_command(cmd) -> TypeGuard[DeleteCommand]:
+    if isinstance(cmd, tuple) and len(cmd) == 2:
+        op = cmd[1]
+        return op == "delete"
     return False
 
 
@@ -312,8 +312,11 @@ def _clean_up_edit_script(
     patch = []  # store processed commands
     for _, cmd in enumerate(edit_script):
         if len(patch) == 0:
-            patch.append(cmd)
-            continue
+            if _is_valid_edit_command(cmd):
+                patch.append(cmd)
+                continue
+            else:
+                raise UnexpectedEditCommandTypeError(cmd[1])
         prev_cmd = patch[-1]
         if _is_insert_command(prev_cmd):
             if _is_insert_command(cmd):
@@ -352,12 +355,17 @@ def _clean_up_edit_script(
     return list(patch)
 
 
-# TODO: Add test for this.
+def _is_valid_edit_command(cmd) -> TypeGuard[EditCommand]:
+    if isinstance(cmd, tuple) and 2 <= len(cmd) <= 3:
+        return _is_insert_command(cmd) or _is_delete_command(cmd)
+    return False
+
+
 class UnexpectedEditCommandTypeError(Exception):
     _op: str
 
     def __init__(self, op: str):
-        self._op
+        self._op = op
         super().__init__(op)
 
     def __str__(self):

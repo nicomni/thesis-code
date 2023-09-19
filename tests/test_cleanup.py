@@ -158,3 +158,11 @@ def test_cleanup(scenario: CleanupScenario, request: pytest.FixtureRequest):
         _id = node.callspec.id
     got = geomdiff._clean_up_edit_script(es, a)
     assert want == got
+
+
+def test_cleanup_raises_UnexpectedEditCommandTypeError():
+    with pytest.raises(
+        geomdiff.UnexpectedEditCommandTypeError,
+        match="Unexpected command type 'foo'. Expected 'insert' or 'delete'",
+    ):
+        geomdiff._clean_up_edit_script([(0, "foo")], [(0, 0)])  # type: ignore
