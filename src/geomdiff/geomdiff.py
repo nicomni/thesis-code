@@ -1,68 +1,40 @@
 # vim: foldlevel=0
 from itertools import chain
-from typing import Literal, Sequence, TypeGuard
 
 from shapely import LineString
 
-# TODO: Write documentation for Myers method.
-
-Point = tuple[float, float]
-InsertCommand = tuple[int, Literal["insert"], Point]  # (0, 'insert', (1,1))
-DeleteCommand = tuple[int, Literal["delete"]]  # (2, 'delete')
-ChangeCommand = tuple[int, Literal["change"], Point]  # (1, 'change', (3,3))
-EditCommand = InsertCommand | DeleteCommand
-PatchCommand = EditCommand | ChangeCommand
-EditScript = Sequence[EditCommand]
-Patch = Sequence[PatchCommand]
-PointSequence = Sequence[Point]
+from .types import *
 
 
-def myers_length_of_shortest_edit_script(a, b):
-    """Calculate the length of shortest edit script
+def diff(a: LineString, b: LineString) -> Patch:
+    """Calculate a diff between sequences 'a' and 'b'
 
-    This is the original algorithm as described on page 6 of
-    "An O(N) Difference Algorithm and Its Variations" by Eugene W. Myers
-    Hei
+    Another word for 'diff' is an edit script that transforms sequence _a_ to
+    sequence _b_.
+
+    Parameters
+    ----------
+    a, b : Sequence of Hashable type
+        Sequences of hashable elements. Hashable because elements needs to
+        be comparable.
+
+    Returns
+    -------
+    Diff
+        The return value is an iterable object of insert/delete edit commands.
 
     """
-    N = len(a)
-    M = len(b)
-    MAX = N + M
-    v = [0] * (2 * MAX + 2)
-    for D in range(0, MAX + 1):
-        # Find all D-paths, using breadth first search.
-        # A D-path is a path in the edit graph that consists of exactly D
-        # non-diagonal, i.e., vertical or horizontal, edges.
-        # Return early when the (N,M) point in the edit graph is reached.
-        for k in range(-D, D + 1, 2):
-            # Find the end point of the furthest reaching D-path in diagonal k
-
-            # If diagonal k is on the lower k-bound (-D) then there exists no
-            # value for v[k-1]. Hence, we allow for this.
-            # Also,
-            # if k is on the upper bound there are no value for v[k+1]. We
-            # guard against this, and the case where the furthest reaching
-            # D-path in the diagonal above is shorter than the path form the
-            # diagonal above.
-            if k == -D or (k != D and v[k - 1] < v[k + 1]):
-                # continue search path from the same x-index as
-                # the furthest reaching path in diagonal above
-                x = v[k + 1]
-            else:
-                # Otherwise k==D or the x index of the furthest reaching D-path
-                # on the diagonal below is greater or equal to the furthest reaching
-                # path on the diagonal above. The result is that we start from the furthest
-                # reaching point below and follow a horizontal edge by increasing x.
-                x = v[k - 1] + 1
-            y = x - k
-            # Follow the snake (if any) while not reaching the lower or rightmost bound
-            while x < N and y < M and a[x] == b[y]:
-                x, y = x + 1, y + 1
-            # record the new row index of the furthest reaching path in diagonal k
-            v[k] = x
-            if x >= N and y >= M:
-                return D
-    raise RuntimeError("Should not reach this point")
+    if not isinstance(a, LineString) or not isinstance(b, LineString):
+        raise TypeError("Input must be LineString")
+    seq1 = list(a.coords)
+    seq2 = list(b.coords)
+    if not is_point_sequence(seq1):
+        raise TypeError(f"Unexpected type {type(seq1)}. Expected PointSequence")
+    if not is_point_sequence(seq2):
+        raise TypeError(f"Unexpected type {type(seq2)}. Expected PointSequence")
+    edit_script = _shortest_edit_script(seq1, seq2, 0, 0)
+    patch = _clean_up_edit_script(edit_script, seq1)
+    return patch
 
 
 # TODO: Complete docstring for D
@@ -227,69 +199,6 @@ def _shortest_edit_script(
         return [(i + cur_x, "delete") for i in range(M, N)]
 
 
-def diff(a: LineString, b: LineString) -> Patch:
-    """Calculate a diff between sequences 'a' and 'b'
-
-    Another word for 'diff' is an edit script that transforms sequence _a_ to
-    sequence _b_.
-
-    Parameters
-    ----------
-    a, b : Sequence of Hashable type
-        Sequences of hashable elements. Hashable because elements needs to
-        be comparable.
-
-    Returns
-    -------
-    Diff
-        The return value is an iterable object of insert/delete edit commands.
-
-    """
-    if not isinstance(a, LineString) or not isinstance(b, LineString):
-        raise TypeError("Input must be LineString")
-    seq1 = list(a.coords)
-    seq2 = list(b.coords)
-    if not _is_point_sequence(seq1):
-        raise TypeError(f"Unexpected type {type(seq1)}. Expected PointSequence")
-    if not _is_point_sequence(seq2):
-        raise TypeError(f"Unexpected type {type(seq2)}. Expected PointSequence")
-    edit_script = _shortest_edit_script(seq1, seq2, 0, 0)
-    patch = _clean_up_edit_script(edit_script, seq1)
-    return patch
-
-
-# Make type guard to determine if PatchCommand is InsertCommand
-def _is_insert_command(cmd) -> TypeGuard[InsertCommand]:
-    if isinstance(cmd, tuple) and len(cmd) == 3:
-        op = cmd[1]
-        return op == "insert"
-    return False
-
-
-def _is_delete_command(cmd) -> TypeGuard[DeleteCommand]:
-    if isinstance(cmd, tuple) and len(cmd) == 2:
-        op = cmd[1]
-        return op == "delete"
-    return False
-
-
-def _is_change_command(cmd: PatchCommand) -> TypeGuard[ChangeCommand]:
-    op = cmd[1]
-    if op == "change":
-        return True
-    return False
-
-
-def _is_point_type(val: object) -> TypeGuard[Point]:
-    return (
-        isinstance(val, tuple)
-        and len(val) == 2
-        and all(isinstance(x, float) for x in val)
-    )
-
-
-def _is_point_sequence(seq: list) -> TypeGuard[PointSequence]:
-    return all(_is_point_type(x) for x in seq)
 
 
 def _clean_up_edit_script(edit_script: EditScript, old_state: PointSequence) -> Patch:
@@ -309,18 +218,18 @@ def _clean_up_edit_script(edit_script: EditScript, old_state: PointSequence) -> 
     patch = []  # store processed commands
     for _, cmd in enumerate(edit_script):
         if len(patch) == 0:
-            if _is_valid_edit_command(cmd):
+            if is_valid_edit_command(cmd):
                 patch.append(cmd)
                 continue
             else:
                 raise UnexpectedEditCommandTypeError(cmd[1])
         prev_cmd = patch[-1]
-        if _is_insert_command(prev_cmd):
-            if _is_insert_command(cmd):
+        if is_insert_command(prev_cmd):
+            if is_insert_command(cmd):
                 # TODO: Chain insert commands
                 patch.append(cmd)
                 continue
-            if _is_delete_command(cmd):
+            if is_delete_command(cmd):
                 if cmd[0] == prev_cmd[0] + 1:
                     # Merge insert/delete into change command
                     old_val = old_state[cmd[0]]
@@ -330,12 +239,12 @@ def _clean_up_edit_script(edit_script: EditScript, old_state: PointSequence) -> 
                     patch[-1] = (cmd[0], "change", change_val)
                     continue
                 patch.append(cmd)
-        elif _is_delete_command(prev_cmd):
-            if _is_delete_command(cmd):
+        elif is_delete_command(prev_cmd):
+            if is_delete_command(cmd):
                 # TODO: Chain delete commands
                 patch.append(cmd)
                 continue
-            if _is_insert_command(cmd):
+            if is_insert_command(cmd):
                 if cmd[0] == prev_cmd[0]:
                     # Merge insert/delete into change command
                     old_val = old_state[cmd[0]]
@@ -345,25 +254,8 @@ def _clean_up_edit_script(edit_script: EditScript, old_state: PointSequence) -> 
                     patch[-1] = (cmd[0], "change", change_val)
                     continue
                 patch.append(cmd)
-        elif _is_change_command(prev_cmd):
+        elif is_change_command(prev_cmd):
             patch.append(cmd)
         else:
             raise UnexpectedEditCommandTypeError(cmd[1])
     return list(patch)
-
-
-def _is_valid_edit_command(cmd) -> TypeGuard[EditCommand]:
-    if isinstance(cmd, tuple) and 2 <= len(cmd) <= 3:
-        return _is_insert_command(cmd) or _is_delete_command(cmd)
-    return False
-
-
-class UnexpectedEditCommandTypeError(Exception):
-    _op: str
-
-    def __init__(self, op: str):
-        self._op = op
-        super().__init__(op)
-
-    def __str__(self):
-        return f"Unexpected command type '{self._op}'. Expected 'insert' or 'delete'"

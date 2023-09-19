@@ -1,6 +1,6 @@
 import pytest
 
-import geomdiff.myers as geomdiff
+import geomdiff.geomdiff as geomdiff
 
 CleanupScenario = tuple[
     str,

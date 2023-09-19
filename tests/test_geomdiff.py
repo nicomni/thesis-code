@@ -1,7 +1,7 @@
 # vim: foldlevel=0
 import pytest
 
-import geomdiff.myers as geomdiff
+import geomdiff.geomdiff as geomdiff
 
 # TESTS for _find_middle_snake
 
@@ -76,7 +76,9 @@ def test_find_middle_snake(scenario: MiddleSnakeScenario):
     got = geomdiff._find_middle_snake(a, b, N, M)
     assert want == got
 
+
 # TODO: Use scenarios
+
 
 def test_diff_empty_to_empty():
     want = []
