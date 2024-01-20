@@ -4,25 +4,22 @@ package gisevents;
 
 import "google/protobuf/timestamp.proto";
 
-/*
- * NOTE: 
- * A creationevent could be stored as a ModificationEvent where the patch
- * of the mod-event would consist of only INSERT commands and the indexes only
- * separated by 1. Because of this predictability it is more efficient to store
- * CreationEvents as a self-contained message type where the geometry is
- * included directly. PointSequences can thus easilt be delta-encoded for
- * efficient storage.
- */
 message CreationEvent {
     int64 id = 1; // required
     google.protobuf.Timestamp timestamp = 2; // required
     int32 version = 3; // required
     oneof geometry {
       Point point = 4;
-      PointSequence point_sequence = 5;
+      LineString linestring = 5;
     }
-    map<string, string> properties = 6;
+    Properties properties = 6;
   }
+
+message Properties {
+    repeated string key = 1;
+    repeated string value = 2;
+  }
+
 
 message ModificationEvent {
     int64 id = 1; // required
@@ -30,10 +27,13 @@ message ModificationEvent {
     int32 version = 3; // required
     // If one of these fields are not set, it will result in the language
     // specific null value.
-    GeomPatch geom_patch = 4;
-    PropDelete prop_delete = 5;
-    PropAdd prop_add = 6;
-    PropReplace prop_replace = 7;
+    oneof patch {
+        Point point_patch = 4;
+        LineStringPatch linestring_patch = 5;
+      }
+    PropDelete prop_delete = 6;
+    PropAdd prop_add = 7;
+    PropUpdate prop_update = 8;
   }
 
 message DeletionEvent {
@@ -43,39 +43,35 @@ message DeletionEvent {
   }
 
 message Point {
-    // lat and lon in nanodegrees 
-    sint32 lat = 1; // required
+    // lat and lon in units of 100 nanodegrees 
     sint32 lon = 2; // required
+    sint32 lat = 1; // required
 }
 
-// PointSequence is used to encode LineString and Polygon geometries.
-message PointSequence {
-  enum GeometryType {
-    LINESTRING = 0;
-    POLYGON = 1;
-  }
-  GeometryType type = 1;
-  // parallell arrays of lat and lon values in nanodegrees
-  repeated sint32 lat = 2; // Delta-encoded
-  repeated sint32 lon = 3; // Delta-encoded
+message LineString {
+    // parallell arrays of lat and lon values in nanodegrees
+    repeated sint32 lat = 1; // Delta-encoded
+    repeated sint32 lon = 2; // Delta-encoded
+}
+
+message Polygon {
+    // parallell arrays of lat and lon values in nanodegrees
+    repeated sint32 lat = 1; // Delta-encoded
+    repeated sint32 lon = 2; // Delta-encoded
+
 }
 
 // A geometry patch
-message GeomPatch {
+message LineStringPatch {
   enum Command {
       INSERT = 0;
       DELETE = 1;
-      DIFF = 2;
+      CHANGE = 2;
     }
   repeated int32 index = 1; // Delta-encoded
   repeated Command command = 2;
-  repeated Point point = 3; // DELETE will have null value here.
+  repeated Point vector = 3; // (0,0) for DELETE commands.
 }
-
-// TODO: Does it make more sense to only use PointSequence for all geometries?
-// A point is a pointsequence of length 1.
-// A linestring is a pointsequence of length > 1.
-// A polygon is a pointsequence of length > 2, where the first and last points are identical.
 
 message PropDelete {
   repeated uint32 key_idx = 1; // Delta coded
@@ -87,7 +83,7 @@ message PropAdd {
   repeated string value = 2;
 }
 
-message PropReplace {
+message PropUpdate {
     // parallell arrays
     repeated uint32 key_idx = 1;
     repeated string value = 2;
