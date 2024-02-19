@@ -4,6 +4,7 @@ from itertools import chain
 from shapely import LineString
 
 from .types import *
+from .errors import GeometryTypeMismatchError, UnexpectedEditCommandTypeError
 
 
 def diff(a: LineString, b: LineString) -> Patch:
