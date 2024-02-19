@@ -1,14 +1,15 @@
 from typing import Literal, Sequence, TypeGuard
 
-Point = tuple[float, float]
-InsertCommand = tuple[int, Literal["insert"], Point]  # (0, 'insert', (1,1))
+Wkt = str
+Vector2D = tuple[float, float]
+InsertCommand = tuple[int, Literal["insert"], Vector2D]  # (0, 'insert', (1,1))
 DeleteCommand = tuple[int, Literal["delete"]]  # (2, 'delete')
-ChangeCommand = tuple[int, Literal["change"], Point]  # (1, 'change', (3,3))
+ChangeCommand = tuple[int, Literal["change"], Vector2D]  # (1, 'change', (3,3))
 EditCommand = InsertCommand | DeleteCommand
 PatchCommand = EditCommand | ChangeCommand
 EditScript = Sequence[EditCommand]
-Patch = Sequence[PatchCommand]
-PointSequence = Sequence[Point]
+LSPatch = Sequence[PatchCommand]  # LineString Patch
+PointSequence = Sequence[Vector2D]
 
 
 def is_insert_command(cmd) -> TypeGuard[InsertCommand]:
@@ -32,7 +33,7 @@ def is_change_command(cmd: PatchCommand) -> TypeGuard[ChangeCommand]:
     return False
 
 
-def is_point_type(val: object) -> TypeGuard[Point]:
+def is_point_type(val: object) -> TypeGuard[Vector2D]:
     return (
         isinstance(val, tuple)
         and len(val) == 2
@@ -40,22 +41,11 @@ def is_point_type(val: object) -> TypeGuard[Point]:
     )
 
 
-def is_point_sequence(seq: list) -> TypeGuard[PointSequence]:
-    return all(is_point_type(x) for x in seq)
+def is_point_sequence(value) -> TypeGuard[PointSequence]:
+    return all(is_point_type(x) for x in value)
 
 
 def is_valid_edit_command(cmd) -> TypeGuard[EditCommand]:
     if isinstance(cmd, tuple) and 2 <= len(cmd) <= 3:
         return is_insert_command(cmd) or is_delete_command(cmd)
     return False
-
-
-class UnexpectedEditCommandTypeError(Exception):
-    _op: str
-
-    def __init__(self, op: str):
-        self._op = op
-        super().__init__(op)
-
-    def __str__(self):
-        return f"Unexpected command type '{self._op}'. Expected 'insert' or 'delete'"

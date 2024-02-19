@@ -1,10 +1,10 @@
 import pytest
 
 from geomdiff.patch import apply_patch
-from geomdiff.types import Patch, PointSequence
+from geomdiff.types import LSPatch, PointSequence
 
 Scenario = tuple[
-    str, tuple[PointSequence, Patch, PointSequence]
+    str, tuple[PointSequence, LSPatch, PointSequence]
 ]  # (id, (point_sequence, patch, expected_result))
 testdata: list[Scenario] = [
     ("nil -> nil", ([], [], [])),

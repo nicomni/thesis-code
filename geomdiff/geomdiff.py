@@ -1,41 +1,93 @@
 # vim: foldlevel=0
 from itertools import chain
 
-from shapely import LineString
+from shapely import GeometryType, LineString, Point, from_wkt, get_type_id
 
-from .types import *
 from .errors import GeometryTypeMismatchError, UnexpectedEditCommandTypeError
+from .types import (EditScript, LSPatch, PointSequence, Vector2D, Wkt,
+                    is_change_command, is_delete_command, is_insert_command,
+                    is_point_sequence, is_valid_edit_command)
 
 
-def diff(a: LineString, b: LineString) -> Patch:
-    """Calculate a diff between sequences 'a' and 'b'
+def _validate_diff_input(a: Wkt, b: Wkt):
+    geom_a = from_wkt(a)
+    geom_b = from_wkt(b)
+    type1 = geom_a.geom_type
+    type2 = geom_b.geom_type
+    if type1 != type2:
+        raise GeometryTypeMismatchError(geom_a, geom_b)
 
-    Another word for 'diff' is an edit script that transforms sequence _a_ to
-    sequence _b_.
+
+def diff(a: Wkt, b: Wkt):
+    """Calculate a diff between geometries 'a' and 'b'
+
+    Another word for 'diff' is an edit script that transforms one geometry to another.
 
     Parameters
     ----------
-    a, b : Sequence of Hashable type
-        Sequences of hashable elements. Hashable because elements needs to
-        be comparable.
+    a, b : WKT (Well Known Text) representation of a geometry
 
     Returns
     -------
-    Diff
-        The return value is an iterable object of insert/delete edit commands.
+    Point
+        If geometries 'a' and 'b' are points, then the return value is a 2D vector (Vector2D).
+    LSPatch
+        If geometries 'a' and 'b' are linestrings, then the return value is a
+        LineString patch.
+
+    Raises
+    ------
+    GeometryTypeMismatchError
+        If geometries 'a' and 'b' are not of the same type.
 
     """
-    if not isinstance(a, LineString) or not isinstance(b, LineString):
-        raise TypeError("Input must be LineString")
-    seq1 = list(a.coords)
-    seq2 = list(b.coords)
-    if not is_point_sequence(seq1):
-        raise TypeError(f"Unexpected type {type(seq1)}. Expected PointSequence")
-    if not is_point_sequence(seq2):
-        raise TypeError(f"Unexpected type {type(seq2)}. Expected PointSequence")
-    edit_script = _shortest_edit_script(seq1, seq2, 0, 0)
-    patch = _clean_up_edit_script(edit_script, seq1)
+    try:
+        geom_a = from_wkt(a)
+        geom_b = from_wkt(b)
+        _validate_diff_input(a, b)
+    except Exception:
+        raise
+
+    geom_type_id = get_type_id(geom_a)
+    match geom_type_id:
+        case GeometryType.POINT:
+            return diff_points(geom_a, geom_b)
+        case GeometryType.LINESTRING | GeometryType.LINEARRING:
+            return diff_linestrings(geom_a, geom_b)
+        case _:
+            raise NotImplementedError(
+                f"Geometry type {geom_a.geom_type} not supported."
+            )
+
+
+def diff_linestrings(a: LineString, b: LineString) -> LSPatch:
+    """Calculate a diff between linestrings 'a' and 'b'"""
+    if a.is_empty and b.is_empty:
+        return []
+    if a.almost_equals(b, decimal=7):
+        return []
+    coords_a = list(a.coords)
+    coords_b = list(b.coords)
+    assert is_point_sequence(coords_a)
+    assert is_point_sequence(coords_b)
+    ses = _shortest_edit_script(coords_a, coords_b, 0, 0)
+    patch = _clean_up_edit_script(ses, coords_a)
     return patch
+
+
+def diff_points(a: Point, b: Point) -> Vector2D:
+    """Calculate a diff between two points
+    Parameters
+    ----------
+    a, b : shapely.Point
+
+    Returns
+    -------
+    Vector2D
+        The return value is a 2D vector representation the difference.
+    """
+    result: Vector2D = (b.x - a.x, b.y - a.y)
+    return result
 
 
 # TODO: Complete docstring for D
@@ -178,7 +230,7 @@ def _shortest_edit_script(
     M = len(b)
     if N == 0:
         index = cur_x - 1  # insert in front of current index
-        return [(index, "insert", l) for l in b]
+        return [(index, "insert", value) for value in b]
 
     if M == 0:
         return [(i + cur_x, "delete") for i in range(0, N)]
@@ -195,14 +247,12 @@ def _shortest_edit_script(
         res = list(chain(diff1, diff2))
         return res
     elif M > N:
-        return [((N - 1) + cur_x, "insert", l) for l in b[N:M]]
+        return [((N - 1) + cur_x, "insert", value) for value in b[N:M]]
     else:
         return [(i + cur_x, "delete") for i in range(M, N)]
 
 
-
-
-def _clean_up_edit_script(edit_script: EditScript, old_state: PointSequence) -> Patch:
+def _clean_up_edit_script(edit_script: EditScript, old_state: PointSequence) -> LSPatch:
     """Clean up edit script
 
     Merge consecutive insert/delete commands into a single change command.

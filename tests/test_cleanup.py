@@ -1,14 +1,16 @@
 import pytest
 
-import geomdiff.geomdiff as geomdiff
+from geomdiff.errors import UnexpectedEditCommandTypeError
+from geomdiff.geomdiff import _clean_up_edit_script
+from geomdiff.types import EditScript, LSPatch, PointSequence
 
 CleanupScenario = tuple[
     str,
     tuple[
-        geomdiff.PointSequence,
-        geomdiff.PointSequence,
-        geomdiff.EditScript,
-        geomdiff.Patch,
+        PointSequence,
+        PointSequence,
+        EditScript,
+        LSPatch,
     ],
 ]
 testdata: list[CleanupScenario] = [
@@ -146,23 +148,19 @@ def idfn(val: CleanupScenario):
 
 
 @pytest.mark.parametrize("scenario", testdata, ids=idfn)
-def test_cleanup(scenario: CleanupScenario, request: pytest.FixtureRequest):
+def test_cleanup(scenario: CleanupScenario):
     data = scenario[1]
     a = data[0]
     # b = data[1]
     es = data[2]
     want = data[3]
-    node = request.node
-    _id = ""
-    if type(node) == pytest.Function:
-        _id = node.callspec.id
-    got = geomdiff._clean_up_edit_script(es, a)
+    got = _clean_up_edit_script(es, a)
     assert want == got
 
 
 def test_cleanup_raises_UnexpectedEditCommandTypeError():
     with pytest.raises(
-        geomdiff.UnexpectedEditCommandTypeError,
+        UnexpectedEditCommandTypeError,
         match="Unexpected command type 'foo'. Expected 'insert' or 'delete'",
     ):
-        geomdiff._clean_up_edit_script([(0, "foo")], [(0, 0)])  # type: ignore
+        _clean_up_edit_script([(0, "foo")], [(0, 0)])  # type: ignore

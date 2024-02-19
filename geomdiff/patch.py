@@ -1,17 +1,11 @@
 from collections import deque
 from typing import Deque
 
-from geomdiff.types import (
-    Patch,
-    Point,
-    PointSequence,
-    is_change_command,
-    is_delete_command,
-    is_insert_command,
-)
+from .types import (LSPatch, PointSequence, Vector2D, is_change_command,
+                    is_delete_command, is_insert_command)
 
 
-def apply_patch(patch: Patch, points: PointSequence) -> PointSequence:
+def apply_patch(patch: LSPatch, points: PointSequence) -> PointSequence:
     """Add a patch to a point sequence
     Parameters
     ----------
@@ -26,7 +20,7 @@ def apply_patch(patch: Patch, points: PointSequence) -> PointSequence:
     """
     N = len(points)
     idxMap: dict[int, int] = {}
-    result: Deque[Point] = deque(points)
+    result: Deque[Vector2D] = deque(points)
     # Reverse the patch
     for _, cmd in enumerate(reversed(patch)):
         i = cmd[0]
@@ -42,7 +36,7 @@ def apply_patch(patch: Patch, points: PointSequence) -> PointSequence:
     return list(result)
 
 
-def add_difference(point: Point, diff: Point) -> Point:
+def add_difference(point: Vector2D, diff: Vector2D) -> Vector2D:
     """Add a difference to a point
     Parameters
     ----------
