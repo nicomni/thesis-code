@@ -11,8 +11,9 @@ message CreationEvent {
     oneof geometry {
       Point point = 4;
       LineString linestring = 5;
+      Polygon polygon = 6;
     }
-    Properties properties = 6;
+    Properties properties = 7;
   }
 
 message Properties {
@@ -31,9 +32,7 @@ message ModificationEvent {
         Point point_patch = 4;
         LineStringPatch linestring_patch = 5;
       }
-    PropDelete prop_delete = 6;
-    PropAdd prop_add = 7;
-    PropUpdate prop_update = 8;
+    PropPatch prop_patch = 6;
   }
 
 message DeletionEvent {
@@ -71,6 +70,12 @@ message LineStringPatch {
   repeated int32 index = 1; // Delta-encoded
   repeated Command command = 2;
   repeated Point vector = 3; // (0,0) for DELETE commands.
+}
+
+message PropPatch {
+  PropDelete prop_delete = 1;
+  PropAdd prop_add = 2;
+  PropUpdate prop_update = 3;
 }
 
 message PropDelete {

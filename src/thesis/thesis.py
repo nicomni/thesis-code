@@ -1,134 +1,107 @@
+import argparse
+import logging
 import os
-import subprocess
-import time
+import shutil
+import tempfile
+from pathlib import Path
+from typing import Optional, Sequence, cast
 
-from alive_progress import alive_bar
 from osgeo import ogr
 
-extract = "sakskobing"  # sakskobing or denmark
+from thesis.api.ogr import get_all_features, osm2gpkg
+from thesis.protobuf import (CreationEvent, DeletionEvent,
+                                  ModificationEvent)
+from thesis.types import ChangeType, OSCInfo
 
-osm_data_dir = "/Users/magganielsen/LocalDocs/Masterprosjekt/OSM"
-src_path = os.path.join(osm_data_dir, f"{extract}", f"{extract}-230901.osm.pbf")
-proj_root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-out_dir = os.path.join(proj_root_dir, "output")
-dst_path = os.path.join(out_dir, f"{extract}-230901.gpkg")
-
-
-def convert_osm_to_gpkg():
-    # ogr2ogr -f "GPKG" output.gpkg input.osm.pbf
-    config = {
-        "OSM_CONFIG_FILE": os.path.join(osm_data_dir, "osmconf.ini"),
-        "OSM_MAX_TMPFILE_SIZE": "4000",
-    }
-    os.environ.update(config)
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-    command = "ogr2ogr"
-    args = [
-        "-f",
-        "GPKG",
-        "-preserve_fid",
-        dst_path,
-        src_path,
-    ]
-    if not os.path.exists(dst_path):
-        with (
-            alive_bar(
-                monitor=False,
-                elapsed="{elapsed}",
-                stats=False,
-                monitor_end=False,
-                stats_end=False,
-                elapsed_end="Total time: {elapsed}",
-                dual_line=True,
-            ) as bar,
-            subprocess.Popen(
-                [command] + args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                bufsize=2,
-            ) as proc,
-        ):
-            assert proc.stdout is not None
-            bar.title("Converting OSM to GPKG")
-            while proc.poll() is None:
-                bar()
-                time.sleep(0.02)
-        # TODO: Handle incomplete linear ring error. See ogr2ogr stderr output.
-        # TODO: Print output from ogr2ogr to console. Both stdout and stderr.
+logger = logging.getLogger(__name__)
 
 
-def create_polygon_layer(ds: ogr.DataSource, layer_name: str) -> ogr.Layer:
-    """Create a new layer in the given data source.
-    If a layer with the given name already exists, it will be deleted.
+def prune_gpkg_file(gpkg_file_path: str):
+    """Clean up gpkg file.
+
+    1.  Extract all simple polygons from multipolygon layer and add them as
+        LineString in 'lines' layer.
+    2.  Remove all other unwanted layers.
     """
-    layer = ds.GetLayerByName(layer_name)
-    if layer is not None:
-        print(f"Layer `{layer_name}` already exists. Deleting...")
-        ds.DeleteLayer(layer.GetLayerDefn().GetName())
-    print(f"Creating layer {layer_name}...")
-    layer = ds.CreateLayer(
-        layer_name,
-        srs=ds.GetLayerByName("multipolygons").GetSpatialRef(),
-        geom_type=ogr.wkbPolygon,
+    feats = get_all_features(gpkg_file_path, "multipolygons")
+    feats = filter(lambda f: mp_has_single_polygon(f.geometry()), feats)
+    feats = map(multipolygon_to_polygon_feature, feats)
+    feats = filter(lambda f: not polygon_has_holes(f.geometry()), feats)
+
+    # TODO: Add simple polygons to a new layer in the gpkg file.
+
+    remove_layers(
+        gpkg_file_path, "multipolygons", "multilinestrings", "other_relations"
     )
-    print(f"Created layer {layer_name}.")
-    return layer
 
 
-def copy_schema(source_layer: ogr.Layer, target_layer: ogr.Layer):
-    for field_defn in source_layer.schema:  # pyright:ignore
-        assert isinstance(field_defn, ogr.FieldDefn)
-        target_layer.CreateField(field_defn)
+def main(argv: Optional[Sequence[str]] = None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("osm_file_path", type=Path, metavar="OSM_FILE")
+    parser.add_argument("osc_dir_path", type=Path, metavar="OSC_DIR")
+    parser.add_argument("-o", "--outfile", type=Path, nargs=1)  # Optional
+    args = parser.parse_args(argv)
 
+    osm_file_path = args.osm_file_path
+    osc_dir_path = args.osc_dir_path
+    events_file_path = args.outfile
 
-def clean_multipolygons(src_layer: ogr.Layer, dst_layer: ogr.Layer):
-    """Extract all polygons from multipolygons and add them to the new polygon layer.
-    Only extracts polygons with no holes.
-    All attribute fields are copied. The FID is preserved.
-    """
-    with alive_bar() as bar:
-        bar.title("Creating polygon features")
-        for src_feat in src_layer:
-            assert isinstance(src_feat, ogr.Feature)
-            geom = src_feat.GetGeometryRef()
-            assert isinstance(geom, ogr.Geometry)
-            # if multipolygon contains only one polygon (true if geometry count of multipolygon is 1),
-            # and that polygon do not contain any holes (true if geometry count of polygon is 1, i.e. only exterior ring)
-            # then add it to the new polygon layer.
-            if (
-                geom.GetGeometryCount() == 1
-                and geom.GetGeometryRef(0).GetGeometryCount() == 1
-            ):
-                polygon = geom.GetGeometryRef(0)
-                dst_feat = ogr.Feature(dst_layer.GetLayerDefn())
-                dst_feat.SetFID(src_feat.GetFID())
-                dst_feat.SetGeometry(polygon)
+    # File descriptors:
+    osm_tmp_fd = None
+    gpkg_tmp_a_fd = None
+    gpkg_tmp_b_fd = None
 
-                # Copy attributes (fields)
-                for field in src_feat.keys():
-                    dst_feat.SetField(field, src_feat.GetField(field))
+    # File names (paths):
+    osm_tmp = None
+    gpkg_tmp_a = None
+    gpkg_tmp_b = None
+    try:
+        osm_tmp_fd, osm_tmp = tempfile.mkstemp(suffix=".osm.pbf")
+        gpkg_tmp_a_fd, gpkg_tmp_a = tempfile.mkstemp(suffix=".gpkg")
+        gpkg_tmp_b_fd, gpkg_tmp_b = tempfile.mkstemp(suffix=".gpkg")
+    finally:
+        if osm_tmp_fd:
+            os.close(osm_tmp_fd)
+        if gpkg_tmp_a_fd:
+            os.close(gpkg_tmp_a_fd)
+        if gpkg_tmp_b_fd:
+            os.close(gpkg_tmp_b_fd)
 
-                # Add the new feature to the destination layer
-                dst_layer.CreateFeature(dst_feat)
-                bar()
+    # Copy input osm file to temparary file.
+    shutil.copy(osm_file_path, osm_tmp)
+
+    # Read .osc file
+    # Store change type (create, modify, delete), entity type (node, way, relation), and id.
+    # Apply changes, convert to gpkg and store in new file. Keep old gpkg file.
+    # For each create event, create a new Creation event:
+    #   For nodes:
+    #    •  Might be part of a way or relation (line or polygon), and it could
+    #       happen that it does not exist in the points layer of the gpkg file.
+    #   For ways and relations:
+    #    • Could either be a line or a polygon.
+    #    • Complicated polygons might not have been extracted from the gpkg file, and will therefore not be found.
+
+    # Setup initial state of osm data
+    osm2gpkg(osm_tmp, gpkg_tmp_a)
+    prune_gpkg_file(gpkg_tmp_a)
+    setup_eventstore(gpkg_tmp_a)
+
+    with alive_bar(len(os.listdir(osc_dir_path))) as bar:
+        # Process changes:
+        for osc_fpath in os.listdir(osc_dir_path):
+            osmium_apply_changes(osm_tmp, osc_fpath)
+            osm2gpkg(osm_tmp, gpkg_tmp_b)
+            prune_gpkg_file(gpkg_tmp_b)
+
+            osc_info = get_change_info(osc_fpath)
+            events = find_changes(gpkg_tmp_a, gpkg_tmp_b, osc_info)
+            write_events(events)
+            gpkg_tmp_a = gpkg_tmp_b
+            bar()
+
+    # FIXME: Delete temporary files.
+    return 0
 
 
 if __name__ == "__main__":
-    ### STAGE 1: Convert OSM file to GeoPackage ###
-    convert_osm_to_gpkg()
-    ### STAGE 2: Clean feature types. Keep only simple points, lines adn polygons.
-    ogr.UseExceptions()
-    with ogr.Open(dst_path, 1) as ds_dirty:
-        assert isinstance(ds_dirty, ogr.DataSource)
-        src_layer_name = "multipolygons"
-        dst_layer_name = "polygons"
-        src_layer = ds_dirty.GetLayerByName(src_layer_name)
-        assert isinstance(src_layer, ogr.Layer)
-        if src_layer is None:
-            raise ValueError(f"Could not find layer {src_layer_name} in {dst_path}")
-        dst_layer = create_polygon_layer(ds_dirty, dst_layer_name)
-
-        copy_schema(src_layer, dst_layer)
-
-        clean_multipolygons(src_layer, dst_layer)
+    exit(main())
