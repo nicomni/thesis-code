@@ -6,6 +6,8 @@ from typing import Optional, cast
 from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo import ogr
 
+from thesis.utils import get_prop_patch
+
 from . import geo, protobuf
 from .api.event_store import write_events
 from .geodiff import geodiff

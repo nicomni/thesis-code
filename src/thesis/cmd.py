@@ -4,14 +4,17 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Optional, Sequence, cast
+from typing import Optional, Sequence
 
+from alive_progress import alive_bar
 from osgeo import ogr
 
-from thesis.api.ogr import get_all_features, osm2gpkg
-from thesis.protobuf import (CreationEvent, DeletionEvent,
-                                  ModificationEvent)
-from thesis.types import ChangeType, OSCInfo
+from thesis.api.event_store import write_events
+from thesis.api.ogr import (find_changes, get_all_features, osm2gpkg,
+                            osmium_apply_changes, remove_layers)
+from thesis.api.osc import get_change_info
+from thesis.geo import (mp_has_single_polygon, multipolygon_to_polygon_feature,
+                        polygon_has_holes)
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +47,7 @@ def main(argv: Optional[Sequence[str]] = None):
 
     osm_file_path = args.osm_file_path
     osc_dir_path = args.osc_dir_path
-    events_file_path = args.outfile
+    # events_file_path = args.outfile
 
     # File descriptors:
     osm_tmp_fd = None
@@ -84,7 +87,7 @@ def main(argv: Optional[Sequence[str]] = None):
     # Setup initial state of osm data
     osm2gpkg(osm_tmp, gpkg_tmp_a)
     prune_gpkg_file(gpkg_tmp_a)
-    setup_eventstore(gpkg_tmp_a)
+    # setup_eventstore(gpkg_tmp_a)
 
     with alive_bar(len(os.listdir(osc_dir_path))) as bar:
         # Process changes:
