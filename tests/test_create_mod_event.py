@@ -1,12 +1,6 @@
-from datetime import datetime
-from re import Pattern
 
 import pytest
-from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo.ogr import Feature
-
-from thesis import protobuf
-from thesis.main import create_mod_event, get_geom_patch
 
 
 class TestGetGeomPatch:

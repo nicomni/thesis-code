@@ -1,7 +1,7 @@
 from shapely import Point
 
 from thesis import protobuf
-from thesis.main import get_pointdiff_message
+from thesis.utils import get_pointdiff_message
 
 
 def test_get_pointdiff_message():

@@ -2,7 +2,7 @@ import pytest
 from shapely import LineString
 
 from thesis import protobuf
-from thesis.main import get_linediff_message
+from thesis.utils import get_linediff_message
 
 Title = str
 Input = tuple[LineString, LineString]
