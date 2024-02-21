@@ -3,12 +3,12 @@ import logging
 from datetime import datetime
 from typing import Optional, cast
 
-from geomdiff import geomdiff
 from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo import ogr
 
 from . import geo, protobuf
 from .api.event_store import write_events
+from .geodiff import geodiff
 
 _logger = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ def modification_event(
     prev_geom = cast(ogr.Geometry, prev_feature.GetGeometryRef())
     curr_geom = cast(ogr.Geometry, curr_feature.GetGeometryRef())
     if not curr_geom.Equals(prev_geom):
-        patch = geomdiff.diff(prev_geom.ExportToWkt(), curr_geom.ExportToWkt())
+        patch = geodiff.diff(prev_geom.ExportToWkt(), curr_geom.ExportToWkt())
 
         if isinstance(patch, tuple[float, float]):
             event.point_patch.CopyFrom(patch)

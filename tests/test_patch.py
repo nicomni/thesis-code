@@ -1,7 +1,7 @@
 import pytest
 
-from geomdiff.patch import apply_patch
-from geomdiff.types import LSPatch, PointSequence
+from thesis.geodiff.patch import apply_patch
+from thesis.geodiff.types import LSPatch, PointSequence
 
 Scenario = tuple[
     str, tuple[PointSequence, LSPatch, PointSequence]

@@ -1,8 +1,8 @@
 import pytest
 
-from geomdiff import diff
-from geomdiff.errors import GeometryTypeMismatchError
-from geomdiff.geomdiff import _validate_diff_input
+from thesis.geodiff import diff
+from thesis.geodiff.errors import GeometryTypeMismatchError
+from thesis.geodiff.geodiff import _validate_diff_input
 
 
 def test_validate_diff_input_when_mismatching_geom_types_should_raise():

@@ -1,8 +1,8 @@
 import pytest
 
-from geomdiff.errors import UnexpectedEditCommandTypeError
-from geomdiff.geomdiff import _clean_up_edit_script
-from geomdiff.types import EditScript, LSPatch, PointSequence
+from thesis.geodiff.errors import UnexpectedEditCommandTypeError
+from thesis.geodiff.geodiff import _clean_up_edit_script
+from thesis.geodiff.types import EditScript, LSPatch, PointSequence
 
 CleanupScenario = tuple[
     str,

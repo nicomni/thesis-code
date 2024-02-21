@@ -2,9 +2,9 @@ from datetime import datetime
 from functools import reduce
 from typing import Sequence, TypeGuard, cast
 
-import geomdiff
 from osgeo import ogr as _ogr
 
+from .geodiff import diff
 from .types import Coordinates, IntCoords
 
 
@@ -131,4 +131,4 @@ def is_linearring(geom: _ogr.Geometry) -> bool:
 
 def diff_geometries(geom1: _ogr.Geometry, geom2: _ogr.Geometry):
     """Calculate the patch that transforms geom1 into geom2."""
-    return geomdiff.diff(geom1.ExportToWkt(), geom2.ExportToWkt())
+    return diff(geom1.ExportToWkt(), geom2.ExportToWkt())

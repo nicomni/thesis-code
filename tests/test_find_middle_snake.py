@@ -1,7 +1,7 @@
 # vim: foldlevel=0
 import pytest
 
-import geomdiff.geomdiff as geomdiff
+import thesis.geodiff.geodiff as geodiff
 
 # TESTS for _find_middle_snake
 
@@ -9,7 +9,7 @@ import geomdiff.geomdiff as geomdiff
 MiddleSnakeScenario = tuple[
     str,
     tuple[
-        geomdiff.PointSequence, geomdiff.PointSequence, tuple[int, int, int, int, int]
+        geodiff.PointSequence, geodiff.PointSequence, tuple[int, int, int, int, int]
     ],
 ]
 scenarios: list[MiddleSnakeScenario] = [
@@ -73,5 +73,5 @@ def test_find_middle_snake(scenario: MiddleSnakeScenario):
     want = data[2]
     N = len(a)
     M = len(b)
-    got = geomdiff._find_middle_snake(a, b, N, M)
+    got = geodiff._find_middle_snake(a, b, N, M)
     assert want == got
