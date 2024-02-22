@@ -84,3 +84,8 @@ exclude_lines = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/thesis"]
+
+[tool.pytest.ini_options]
+addopts = [
+  "--import-mode=importlib"
+]
