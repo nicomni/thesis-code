@@ -98,7 +98,7 @@ def _find_middle_snake(
 ) -> tuple[int, int, int, int, int]:
     """Find the middle snake
 
-    In an edit graph, a _snake_ is a non-diagonal edge followed by a possibly
+    In an edit graph, a snake is a non-diagonal edge followed by a possibly
     empty sequence of diagonal edges.
 
     Returns
@@ -261,7 +261,7 @@ def _clean_up_edit_script(edit_script: EditScript, old_state: PointSequence) -> 
     Example:
         a = [(1,1)]
         b = [(3,3)]
-        The edit script becomes:
+        The edit script to turn a into b is:
         [(0, 'delete'), (0, 'insert', (3,3))]
         We want to return:
         [(0, 'change', (2,2))]
