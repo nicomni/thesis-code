@@ -1,35 +1,22 @@
-import enum
 import logging
+import os
 import shutil
 import subprocess
 import tempfile
 import time
 import warnings
 from pathlib import Path
-from typing import NamedTuple, Optional, Sequence, cast
+from typing import Literal, Optional, cast
 
 from alive_progress import alive_bar
-from osgeo import ogr, os
+from osgeo import ogr
 
-from ..events import creation_event, deletion_event, modification_event
-from ..protobuf import CreationEvent, DeletionEvent, ModificationEvent
-from .osc import OSCInfo
+from thesis.api.osc import OSCInfo
+from thesis.osm import ChangeType, ElementIdentifier, ElementType
 
 _logger = logging.getLogger(__name__)
 
-ElementID = int
 FileName = str
-
-class ChangeType(enum.Enum):
-    CREATE = 1
-    MODIFY = 2
-    DELETE = 3
-
-
-class ElementType(enum.Enum):
-    NODE = 1
-    WAY = 2
-    RELATION = 3
 
 # Singleton
 class Config:
@@ -70,16 +57,6 @@ class Config:
     def osm_out_tmp(self) -> str:
         return self._osm_out_tmp
 
-class ElementIdentifier(NamedTuple):
-    """An identifier for an OSM element.
-
-    According to the OSM wiki, the ID of an element is unique only within its
-    element type.
-    To identify an element we need both the element type and the ID.
-    """
-
-    id: ElementID
-    etype: ElementType
 def osm2gpkg(osm_file_path: str, gpkg_out_path: str):
     """Convert osm file to gpkg file using `ogr2ogr`.
 
@@ -193,15 +170,19 @@ def _find_feature(
 
 _blacklist: list[ElementIdentifier] = []
 
+Delete = tuple[Literal[ChangeType.DELETE], ogr.Feature]
+Modify = tuple[Literal[ChangeType.MODIFY], ogr.Feature, ogr.Feature]
+Create = tuple[Literal[ChangeType.CREATE], ogr.Feature]
 
 def find_changes(
     prev_gpkg_path: str, curr_gpkg_path: str, osc_info: OSCInfo
-) -> Sequence[CreationEvent | ModificationEvent | DeletionEvent]:
-    """Find changes from two gpkg files.
+):
+    """Find changes between two gpkg files.
 
     Uses inforamtion from an OSC file to find the features that have changed.
     """
-    result: list[CreationEvent | ModificationEvent | DeletionEvent] = []
+    result: list[Create | Modify | Delete] = []
+
     with (
         cast(ogr.DataSource, ogr.Open(prev_gpkg_path, driver="GPKG")) as prev_ds,
         cast(ogr.DataSource, ogr.Open(curr_gpkg_path, driver="GPKG")) as curr_ds,
@@ -222,6 +203,7 @@ def find_changes(
                     f"Skipping {identifier.etype} with ID {identifier.id}. Found in blacklist."
                 )
                 continue
+            change: Create | Modify | Delete
             if change_info.change_type is ChangeType.CREATE:
                 _logger.info(
                     f"Processing creation of {identifier.etype} with ID {identifier.id}"
@@ -233,7 +215,7 @@ def find_changes(
                     )
                     _blacklist.append(identifier)
                     continue
-                event = creation_event(feature)
+                change= (change_info.change_type, feature)
             elif change_info.change_type is ChangeType.MODIFY:
                 _logger.info(
                     f"Processing modification of {identifier.etype} with ID {identifier.id}"
@@ -252,7 +234,7 @@ def find_changes(
                     )
                     _blacklist.append(identifier)
                     continue
-                event = modification_event(feat1, feat2)
+                change = (change_info.change_type, feat1, feat2)
             elif change_info.change_type is ChangeType.DELETE:
                 _logger.info(
                     f"Processing deletion of {identifier.etype} with ID {identifier.id}"
@@ -264,11 +246,11 @@ def find_changes(
                     )
                     _blacklist.append(identifier)
                     continue
-                event = deletion_event(feature)
+                change = (change_info.change_type, feature)
             else:
                 raise ValueError(f"Unexpected change type: {change_info.change_type}")
 
-            result.append(event)
+            result.append(change)
 
     return result
 
