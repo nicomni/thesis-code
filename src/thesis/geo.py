@@ -4,7 +4,7 @@ from typing import Sequence, TypeGuard, cast
 
 from osgeo import ogr as _ogr
 
-from .geodiff import diff
+from thesis.geodiff import diff
 
 Coordinates = list[tuple[float, float]]
 IntCoords = list[tuple[int, int]]

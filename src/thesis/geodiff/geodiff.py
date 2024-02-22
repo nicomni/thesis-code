@@ -3,10 +3,12 @@ from itertools import chain
 
 from shapely import GeometryType, LineString, Point, from_wkt, get_type_id
 
-from .errors import GeometryTypeMismatchError, UnexpectedEditCommandTypeError
-from .types import (EditScript, LSPatch, PointSequence, Vector2D, Wkt,
-                    is_change_command, is_delete_command, is_insert_command,
-                    is_point_sequence, is_valid_edit_command)
+from thesis.geodiff.errors import (GeometryTypeMismatchError,
+                                   UnexpectedEditCommandTypeError)
+from thesis.geodiff.types import (EditScript, LSPatch, PointSequence, Vector2D,
+                                  Wkt, is_change_command, is_delete_command,
+                                  is_insert_command, is_point_sequence,
+                                  is_valid_edit_command)
 
 
 def _validate_diff_input(a: Wkt, b: Wkt):

@@ -2,9 +2,7 @@ from typing import cast
 
 from osgeo import ogr
 
-from thesis import protobuf
-
-from .. import geo
+from thesis import geo, protobuf
 
 
 def to_point_message(geom: ogr.Geometry) -> protobuf.Point:

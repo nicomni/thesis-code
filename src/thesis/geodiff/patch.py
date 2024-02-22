@@ -1,8 +1,9 @@
 from collections import deque
 from typing import Deque
 
-from .types import (LSPatch, PointSequence, Vector2D, is_change_command,
-                    is_delete_command, is_insert_command)
+from thesis.geodiff.types import (LSPatch, PointSequence, Vector2D,
+                                  is_change_command, is_delete_command,
+                                  is_insert_command)
 
 
 def apply_patch(patch: LSPatch, points: PointSequence) -> PointSequence:

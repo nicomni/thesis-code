@@ -4,9 +4,9 @@ from osgeo import ogr
 from shapely import GeometryType, LineString, Point, from_wkt, get_type_id
 from shapely.geometry.base import BaseGeometry
 
-from . import geo, protobuf
-from .api.ogr import ElementType
-from .geodiff import geodiff
+from thesis import geo, protobuf
+from thesis.geodiff import geodiff
+from thesis.osm import ElementType
 
 # TODO: Remove shapely dependency
 
