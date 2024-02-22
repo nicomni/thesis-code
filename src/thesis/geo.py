@@ -5,8 +5,9 @@ from typing import Sequence, TypeGuard, cast
 from osgeo import ogr as _ogr
 
 from .geodiff import diff
-from .types import Coordinates, IntCoords
 
+Coordinates = list[tuple[float, float]]
+IntCoords = list[tuple[int, int]]
 
 def has_field(feat_def: _ogr.FeatureDefn, field_name: str):
     """Check if a FeatureDefn object has field with the specified name."""

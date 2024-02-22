@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from alive_progress import alive_bar
-from osgeo import ogr
 
 from thesis.api.event_store import write_events
 from thesis.api.ogr import (find_changes, get_all_features, osm2gpkg,

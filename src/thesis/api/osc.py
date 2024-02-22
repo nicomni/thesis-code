@@ -1,8 +1,18 @@
 import xml.etree.ElementTree as ET
+from typing import NamedTuple
 
-from thesis.types import (ChangeInfo, ChangeType, ElementIdentifier,
-                          ElementType, OSCInfo)
+from .ogr import ChangeType, ElementIdentifier, ElementType
 
+
+class ChangeInfo(NamedTuple):
+    """A tuple containing information about a change.
+    The tuple contains a ChangeType and an ElementIdentifier.
+    """
+
+    change_type: ChangeType
+    element_identifier: ElementIdentifier
+
+OSCInfo = list[ChangeInfo]
 
 def get_change_info(osc_file_path: str) -> OSCInfo:
     """Get change info from osc file."""

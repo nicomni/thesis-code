@@ -1,3 +1,4 @@
+import enum
 import logging
 import shutil
 import subprocess
@@ -5,18 +6,30 @@ import tempfile
 import time
 import warnings
 from pathlib import Path
-from typing import Optional, Sequence, cast
+from typing import NamedTuple, Optional, Sequence, cast
 
 from alive_progress import alive_bar
 from osgeo import ogr, os
 
-from thesis.events import creation_event, deletion_event, modification_event
-from thesis.protobuf import (CreationEvent, DeletionEvent,
-                                  ModificationEvent)
-from thesis.types import (ChangeType, ElementIdentifier, ElementType, FileName,
-                          OSCInfo)
+from ..events import creation_event, deletion_event, modification_event
+from ..protobuf import CreationEvent, DeletionEvent, ModificationEvent
+from .osc import OSCInfo
 
 _logger = logging.getLogger(__name__)
+
+ElementID = int
+FileName = str
+
+class ChangeType(enum.Enum):
+    CREATE = 1
+    MODIFY = 2
+    DELETE = 3
+
+
+class ElementType(enum.Enum):
+    NODE = 1
+    WAY = 2
+    RELATION = 3
 
 # Singleton
 class Config:
@@ -57,6 +70,16 @@ class Config:
     def osm_out_tmp(self) -> str:
         return self._osm_out_tmp
 
+class ElementIdentifier(NamedTuple):
+    """An identifier for an OSM element.
+
+    According to the OSM wiki, the ID of an element is unique only within its
+    element type.
+    To identify an element we need both the element type and the ID.
+    """
+
+    id: ElementID
+    etype: ElementType
 def osm2gpkg(osm_file_path: str, gpkg_out_path: str):
     """Convert osm file to gpkg file using `ogr2ogr`.
 

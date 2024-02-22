@@ -4,10 +4,8 @@ from osgeo import ogr
 from shapely import GeometryType, LineString, Point, from_wkt, get_type_id
 from shapely.geometry.base import BaseGeometry
 
-from thesis import protobuf
-from thesis.types import ElementType
-
-from . import geo
+from . import geo, protobuf
+from .api.ogr import ElementType
 from .geodiff import geodiff
 
 # TODO: Remove shapely dependency
@@ -29,8 +27,8 @@ def get_pointdiff_message(a: Point, b: Point) -> protobuf.Point:
         A protocol buffer Point message.
     """
     pointdiff = geodiff.diff_points(a, b)
-    lat = pointdiff.x
-    lon = pointdiff.y
+    lat = pointdiff[0]
+    lon = pointdiff[1]
     ilat = geo.to100nano(lat)
     ilon = geo.to100nano(lon)
     return protobuf.Point(lat=ilat, lon=ilon)

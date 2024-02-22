@@ -1,4 +1,4 @@
-from thesis.types import ElementType
+from thesis.api.ogr import ElementType
 from thesis.utils import get_search_layers
 
 

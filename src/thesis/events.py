@@ -122,10 +122,11 @@ def modification_event(
     if not curr_geom.Equals(prev_geom):
         patch = geodiff.diff(prev_geom.ExportToWkt(), curr_geom.ExportToWkt())
 
-        if isinstance(patch, tuple[float, float]):
-            event.point_patch.CopyFrom(patch)
-        elif isinstance(patch, protobuf.LineStringPatch):
-            event.linestring_patch.CopyFrom(patch)
+        # FIXME: Fix this
+        # if isinstance(patch, tuple[float, float]):
+        #     event.point_patch.CopyFrom(patch)
+        # elif isinstance(patch, protobuf.LineStringPatch):
+        #     event.linestring_patch.CopyFrom(patch)
 
     prop_patch = get_prop_patch(prev_feature, curr_feature)
     # Check properties
