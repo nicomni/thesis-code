@@ -7,11 +7,11 @@ from thesis.geodiff.types import EditScript, PointSequence
 
 # TODO: Use scenarios
 
-TestId = str
+ScenarioId = str
 Input = tuple[PointSequence, PointSequence]
 Expected = EditScript
 
-Scenario = tuple[TestId, Input, Expected]
+Scenario = tuple[ScenarioId, Input, Expected]
 
 Scenarios = list[Scenario]
 

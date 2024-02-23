@@ -76,7 +76,7 @@ def get_geom_patch(prev_feature: ogr.Feature, curr_feature: ogr.Feature):
     # Check for geometry change
     prev_geom: BaseGeometry = from_wkt(prev_feature.GetGeometryRef().ExportToWkt())
     curr_geom: BaseGeometry = from_wkt(curr_feature.GetGeometryRef().ExportToWkt())
-    if prev_geom.almost_equals(curr_geom, decimal=7):
+    if prev_geom.equals_exact(curr_geom, tolerance=1e-7):
         return None
     geom_type_id = get_type_id(prev_geom)
     match geom_type_id:

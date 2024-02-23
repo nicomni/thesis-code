@@ -66,7 +66,7 @@ def diff_linestrings(a: LineString, b: LineString) -> LSPatch:
     """Calculate a diff between linestrings 'a' and 'b'"""
     if a.is_empty and b.is_empty:
         return []
-    if a.almost_equals(b, decimal=7):
+    if a.equals_exact(b, tolerance=1e-7):
         return []
     coords_a = list(a.coords)
     coords_b = list(b.coords)

@@ -89,3 +89,6 @@ packages = ["src/thesis"]
 addopts = [
   "--import-mode=importlib"
 ]
+filterwarnings = [
+  "ignore:.*tp_new.*Python 3.14.*:DeprecationWarning",
+]
