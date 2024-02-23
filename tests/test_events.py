@@ -72,7 +72,7 @@ class TestCreateCreationEvent:
             polygon_feature_1.GetFieldAsISO8601DateTime("osm_timestamp")
         )
         polygon_msg = protobuf.Polygon(
-            lat=[0, 0, 10000000, 0, -10000000], lon=[0, 10000000, 0, -10000000, 0]
+            lon=[0, 0, 10000000, 0, -10000000], lat=[0, 10000000, 0, -10000000, 0]
         )
 
         want = protobuf.CreationEvent(
