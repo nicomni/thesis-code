@@ -7,8 +7,7 @@ from shapely.geometry.base import BaseGeometry
 from thesis import geo, protobuf
 from thesis.geodiff import geodiff
 from thesis.osm import ElementType
-
-# TODO: Remove shapely dependency
+from thesis import protobuf
 
 
 def get_search_layers(osm_type: ElementType):
@@ -18,6 +17,13 @@ def get_search_layers(osm_type: ElementType):
             return ["points"]
         case ElementType.WAY | ElementType.RELATION:
             return ["lines", "rings"]
+
+
+def to_point_message(point: tuple[float, float]) -> protobuf.Point:
+    """Convert a point tuple to a protobuf message."""
+    ilon = geo.to100nano(point[0])
+    ilat = geo.to100nano(point[1])
+    return protobuf.Point(lat=ilat, lon=ilon)
 
 
 def get_pointdiff_message(a: Point, b: Point) -> protobuf.Point:
@@ -66,6 +72,7 @@ def get_linediff_message(a: LineString, b: LineString):
     )
 
 
+# TODO: Refactor
 def get_geom_patch(prev_feature: ogr.Feature, curr_feature: ogr.Feature):
     # Check geometry types
     if (

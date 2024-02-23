@@ -1,10 +1,10 @@
-
 import pytest
 from osgeo.ogr import Feature
 
 from thesis.utils import get_geom_patch
 
 
+# TODO: Refactor
 class TestGetGeomPatch:
     def test_mismatching_geom_type_raises(
         self, point_feature_1: Feature, linestring_feature_0: Feature
