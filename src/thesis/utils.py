@@ -7,7 +7,6 @@ from shapely.geometry.base import BaseGeometry
 from thesis import geo, protobuf
 from thesis.geodiff import geodiff
 from thesis.osm import ElementType
-from thesis import protobuf
 
 
 def get_search_layers(osm_type: ElementType):
@@ -24,6 +23,29 @@ def to_point_message(point: tuple[float, float]) -> protobuf.Point:
     ilon = geo.to100nano(point[0])
     ilat = geo.to100nano(point[1])
     return protobuf.Point(lat=ilat, lon=ilon)
+
+
+def to_lspatch_message(patch: geodiff.LSPatch) -> protobuf.LineStringPatch:
+    command: list[protobuf.LineStringPatch.Command] = []
+    index: list[int] = []
+    vector: list[protobuf.Point] = []
+
+    to_command = {
+        "insert": protobuf.LineStringPatch.INSERT,
+        "change": protobuf.LineStringPatch.CHANGE,
+        "delete": protobuf.LineStringPatch.DELETE,
+    }
+
+    for patch_cmd in patch:
+        index.append(patch_cmd[0])
+        command.append(to_command[patch_cmd[1]])
+        if patch_cmd[1] == "delete":
+            vector.append(protobuf.Point(lon=0, lat=0))
+        else:
+            vector.append(to_point_message(patch_cmd[2]))
+
+    result = protobuf.LineStringPatch(command=command, index=index, vector=vector)
+    return result
 
 
 def get_pointdiff_message(a: Point, b: Point) -> protobuf.Point:
