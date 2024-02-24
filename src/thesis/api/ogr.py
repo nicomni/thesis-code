@@ -11,12 +11,12 @@ from typing import Literal, Optional, cast
 from alive_progress import alive_bar
 from osgeo import ogr
 
-from thesis.api.osc import OSCInfo
-from thesis.osm import ChangeType, ElementIdentifier, ElementType
+from thesis import osm
 
 _logger = logging.getLogger(__name__)
 
 FileName = str
+
 
 # Singleton
 class Config:
@@ -52,10 +52,10 @@ class Config:
     def osm_max_tmpfile_size(self) -> int:
         return self._osm_max_tmpfile_size
 
-
     @property
     def osm_out_tmp(self) -> str:
         return self._osm_out_tmp
+
 
 def osm2gpkg(osm_file_path: str, gpkg_out_path: str):
     """Convert osm file to gpkg file using `ogr2ogr`.
@@ -141,21 +141,21 @@ def remove_layers(gpkg_file_path: str, *args: str):
 
 
 def _find_feature(
-    ds: ogr.DataSource, identifier: ElementIdentifier
+    ds: ogr.DataSource, identifier: osm.ElementIdentifier
 ) -> ogr.Feature | None:
     """Find feature in data source."""
     # If entity_type is node, search in points layer.
     # If entity_type is way or relation, search in lines and linearrings layer.
     # If feature is not found, return None.
     match identifier.etype:
-        case ElementType.NODE:
+        case osm.ElementType.NODE:
             layer = cast(ogr.Layer, ds.GetLayerByName("points"))
             point = cast(ogr.Feature | None, layer.GetFeature(identifier.id))
             if point:
                 return point
             else:
                 return None
-        case ElementType.WAY | ElementType.RELATION:
+        case osm.ElementType.WAY | osm.ElementType.RELATION:
             # Search in lines layer
             layer = cast(ogr.Layer, ds.GetLayerByName("lines"))
             line = cast(ogr.Feature | None, layer.GetFeature(identifier.id))
@@ -168,15 +168,13 @@ def _find_feature(
                 return polygon
 
 
-_blacklist: list[ElementIdentifier] = []
+_blacklist: list[osm.ElementIdentifier] = []
 
-Delete = tuple[Literal[ChangeType.DELETE], ogr.Feature]
-Modify = tuple[Literal[ChangeType.MODIFY], ogr.Feature, ogr.Feature]
-Create = tuple[Literal[ChangeType.CREATE], ogr.Feature]
+Delete = tuple[Literal[osm.ChangeType.DELETE], ogr.Feature]
+Modify = tuple[Literal[osm.ChangeType.MODIFY], ogr.Feature, ogr.Feature]
+Create = tuple[Literal[osm.ChangeType.CREATE], ogr.Feature]
 
-def find_changes(
-    prev_gpkg_path: str, curr_gpkg_path: str, osc_info: OSCInfo
-):
+def find_changes(prev_gpkg_path: str, curr_gpkg_path: str, osc_info: osm.OSCInfo):
     """Find changes between two gpkg files.
 
     Uses inforamtion from an OSC file to find the features that have changed.
@@ -184,8 +182,8 @@ def find_changes(
     result: list[Create | Modify | Delete] = []
 
     with (
-        cast(ogr.DataSource, ogr.Open(prev_gpkg_path, driver="GPKG")) as prev_ds,
         cast(ogr.DataSource, ogr.Open(curr_gpkg_path, driver="GPKG")) as curr_ds,
+        cast(ogr.DataSource, ogr.Open(prev_gpkg_path, driver="GPKG")) as prev_ds,
     ):
         _logger.info("Detecting changes.")
         # FIXME:
@@ -204,7 +202,7 @@ def find_changes(
                 )
                 continue
             change: Create | Modify | Delete
-            if change_info.change_type is ChangeType.CREATE:
+            if change_info.change_type is osm.ChangeType.CREATE:
                 _logger.info(
                     f"Processing creation of {identifier.etype} with ID {identifier.id}"
                 )
@@ -215,8 +213,8 @@ def find_changes(
                     )
                     _blacklist.append(identifier)
                     continue
-                change= (change_info.change_type, feature)
-            elif change_info.change_type is ChangeType.MODIFY:
+                change = (change_info.change_type, feature)
+            elif change_info.change_type is osm.ChangeType.MODIFY:
                 _logger.info(
                     f"Processing modification of {identifier.etype} with ID {identifier.id}"
                 )
@@ -235,7 +233,7 @@ def find_changes(
                     _blacklist.append(identifier)
                     continue
                 change = (change_info.change_type, feat1, feat2)
-            elif change_info.change_type is ChangeType.DELETE:
+            elif change_info.change_type is osm.ChangeType.DELETE:
                 _logger.info(
                     f"Processing deletion of {identifier.etype} with ID {identifier.id}"
                 )
@@ -266,7 +264,8 @@ def osmium_apply_changes(osm_fpath: str, osc_fpath: str) -> None:
 
     def get_command():
         osmium_cmd = shutil.which("osmium")
-        return [ osmium_cmd,
+        return [
+            osmium_cmd,
             "apply-changes",
             "-f",
             "pbf",
@@ -276,7 +275,7 @@ def osmium_apply_changes(osm_fpath: str, osc_fpath: str) -> None:
             osm_fpath,
             osc_fpath,
         ]
-    
+
     command = get_command()
     with (
         subprocess.Popen(
@@ -289,7 +288,7 @@ def osmium_apply_changes(osm_fpath: str, osc_fpath: str) -> None:
             monitor_end=False,
             stats_end=False,
             elapsed_end="Total time: {elapsed}",
-        ) as bar
+        ) as bar,
     ):
         _logger.info(f"Applying change file with: `{' '.join(command)}`")
         bar.title("Applying changes")
