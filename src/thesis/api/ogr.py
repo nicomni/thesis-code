@@ -174,6 +174,14 @@ Delete = tuple[Literal[osm.ChangeType.DELETE], ogr.Feature]
 Modify = tuple[Literal[osm.ChangeType.MODIFY], ogr.Feature, ogr.Feature]
 Create = tuple[Literal[osm.ChangeType.CREATE], ogr.Feature]
 
+
+def _get_union_of_fids(layer1: ogr.Layer, layer2: ogr.Layer) -> set[int]:
+    fids1 = set(map(lambda feat: cast(int, feat.GetFID()), layer1))
+    fids2 = set(map(lambda feat: cast(int, feat.GetFID()), layer2))
+    union_fids = fids1 | fids2
+    return union_fids
+
+
 def find_changes(prev_gpkg_path: str, curr_gpkg_path: str, osc_info: osm.OSCInfo):
     """Find changes between two gpkg files.
 
