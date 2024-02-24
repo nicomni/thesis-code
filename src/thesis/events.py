@@ -43,10 +43,6 @@ def creation_event(feature: ogr.Feature) -> protobuf.CreationEvent:
     event.version = osm_version
 
     # Properties (tags)
-    # FIXME:
-    # This only works if the osmconf.ini file is correctly set up to
-    # serizlize all_tags as a JSON string. Consider hardcoding the settings
-    # from osmconf.ini.
     all_tags_str: Optional[str] = feature.GetFieldAsString("all_tags")
     if all_tags_str:
         all_tags: dict = json.loads(all_tags_str)
