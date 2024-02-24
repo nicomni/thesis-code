@@ -1,6 +1,8 @@
 # Fixtures are defined in conftest.py
 
 from datetime import datetime
+import json
+from osgeo import ogr
 
 import pytest
 from google.protobuf.timestamp_pb2 import Timestamp
@@ -17,82 +19,84 @@ class TestCreateCreationEvent:
         with pytest.raises(ValueError):
             events._validate_creation_event_args(point_feature_without_version)
 
-    def test_create_point_event(self, point_feature_1: Feature):
-        ts_msg = Timestamp()
-        ts_msg.FromDatetime(
-            datetime.fromisoformat(
-                point_feature_1.GetFieldAsISO8601DateTime("osm_timestamp")
-            )
-        )
+    def test_creation_event_point(self, base_featdef: ogr.FeatureDefn):
+        # Arrange
+        point = ogr.CreateGeometryFromWkt("POINT (1 2)")
+        fid = 5
+        timestamp = "2023-01-01T00:00:00Z"
+        version = 2
+        properties = {"testKey": "testValue"}
+        feat = ogr.Feature(base_featdef)
+        feat.SetFID(fid)
+        feat.SetField("osm_timestamp", timestamp)
+        feat.SetField("osm_version", version)
+        feat.SetField("all_tags", json.dumps(properties))
+        feat.SetGeometry(point)
 
-        props = protobuf.Properties(key=["key"], value=["value"])
+        # Act
+        got = events.creation_event(feat)
 
-        want = protobuf.CreationEvent(
-            id=1,
-            point=protobuf.Point(lon=10000000, lat=10000000),
-            version=1,
-            properties=props,
-            timestamp=ts_msg,
-        )
-        got = events.creation_event(point_feature_1)
+        # Assert
+        assert got.id == fid
+        assert got.version == version
+        assert got.properties.key == list(properties.keys())
+        assert got.properties.value == list(properties.values())
+        assert got.point.lon == 10000000
+        assert got.point.lat == 20000000
+        assert got.timestamp.ToJsonString() == timestamp
 
-        assert got.id == want.id
-        assert got.version == want.version
-        assert got.properties == want.properties
-        assert got.point.lat == want.point.lat
-        assert got.point.lon == want.point.lon
-        assert got.timestamp.ToDatetime() == ts_msg.ToDatetime()
+    def test_create_linestring(self, base_featdef: ogr.FeatureDefn):
+        # Arrange
+        line = ogr.CreateGeometryFromWkt("LINESTRING (1 2, 2 2)")
 
-    def test_create_linestring(
-        self, linestring_feature_0: Feature, timestamp_0: datetime
-    ):
-        # Delta-coded LineString
-        ls = protobuf.LineString(lon=[10000000, 20000000], lat=[20000000, 20000000])
+        fid = 4
+        timestamp = "2023-01-01T00:00:00Z"
+        version = 3
+        properties = {"testKey": "testValue"}
 
-        want = protobuf.CreationEvent(
-            id=1,
-            linestring=ls,
-            version=1,
-            properties={"key": ["LSkey"], "value": ["LSvalue"]},
-            timestamp=Timestamp(),
-        )
-        want.timestamp.FromDatetime(timestamp_0)
-        got = events.creation_event(linestring_feature_0)
+        feat = ogr.Feature(base_featdef)
+        feat.SetFID(fid)
+        feat.SetField("osm_timestamp", timestamp)
+        feat.SetField("osm_version", version)
+        feat.SetField("all_tags", json.dumps(properties))
+        feat.SetGeometry(line)
 
-        assert got.id == want.id
-        assert got.version == want.version
-        assert got.timestamp.seconds == want.timestamp.seconds
-        assert got.properties.key == want.properties.key
-        assert got.properties.value == want.properties.value
-        assert got.linestring.lon == want.linestring.lon
-        assert got.linestring.lat == want.linestring.lat
+        # Act
+        got = events.creation_event(feat)
 
-    def test_create_polygon(self, polygon_feature_1: Feature):
-        dt = datetime.fromisoformat(
-            polygon_feature_1.GetFieldAsISO8601DateTime("osm_timestamp")
-        )
-        polygon_msg = protobuf.Polygon(
-            lon=[0, 0, 10000000, 0, -10000000], lat=[0, 10000000, 0, -10000000, 0]
-        )
+        # Assert
+        assert got.id == fid
+        assert got.version == version
+        assert got.properties.key == list(properties.keys())
+        assert got.properties.value == list(properties.values())
+        assert got.linestring.lon == [10000000, 10000000]
+        assert got.linestring.lat == [20000000, 0]
+        assert got.timestamp.ToJsonString() == timestamp
 
-        want = protobuf.CreationEvent(
-            id=1,
-            polygon=polygon_msg,
-            version=1,
-            properties={"key": ["key1", "key2"], "value": ["value1", "value2"]},
-            timestamp=Timestamp(),
-        )
-        want.timestamp.FromDatetime(dt)
+    def test_create_polygon(self, base_featdef: ogr.FeatureDefn):
+        polygon = ogr.CreateGeometryFromWkt("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
+        fid = 3
+        timestamp = "2023-01-01T00:00:00Z"
+        version = 14
+        properties = {"testKey": "testValue"}
 
-        got = events.creation_event(polygon_feature_1)
+        feat = ogr.Feature(base_featdef)
+        feat.SetFID(fid)
+        feat.SetField("osm_timestamp", timestamp)
+        feat.SetField("osm_version", version)
+        feat.SetField("all_tags", json.dumps(properties))
+        feat.SetGeometry(polygon)
 
-        assert got.id == want.id
-        assert got.version == want.version
-        assert got.timestamp.ToJsonString() == want.timestamp.ToJsonString()
-        assert got.properties.key == want.properties.key
-        assert got.properties.value == want.properties.value
-        assert got.polygon.lat == want.polygon.lat
-        assert got.polygon.lon == want.polygon.lon
+        # Act
+        got = events.creation_event(feat)
+
+        assert got.id == fid
+        assert got.version == version
+        assert got.timestamp.ToJsonString() == timestamp
+        assert got.properties.key == list(properties.keys())
+        assert got.properties.value == list(properties.values())
+        assert got.polygon.lon == [0, 0, 10000000, 0, -10000000]
+        assert got.polygon.lat == [0, 10000000, 0, -10000000, 0]
 
 
 class TestCreateModEvent:
