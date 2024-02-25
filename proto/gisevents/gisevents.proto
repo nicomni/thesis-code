@@ -31,8 +31,9 @@ message ModificationEvent {
     oneof patch {
         Point point_patch = 4;
         LineStringPatch linestring_patch = 5;
+        LineStringPatch polygon_patch = 6;
       }
-    PropPatch prop_patch = 6;
+    PropPatch prop_patch = 7;
   }
 
 message DeletionEvent {
