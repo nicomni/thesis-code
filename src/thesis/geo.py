@@ -9,6 +9,7 @@ from thesis.geodiff import diff
 Coordinates = list[tuple[float, float]]
 IntCoords = list[tuple[int, int]]
 
+
 def has_field(feat_def: _ogr.FeatureDefn, field_name: str):
     """Check if a FeatureDefn object has field with the specified name."""
     for i in range(feat_def.GetFieldCount()):
@@ -20,7 +21,7 @@ def has_field(feat_def: _ogr.FeatureDefn, field_name: str):
 
 
 def mp_has_single_polygon(geom: _ogr.Geometry) -> bool:
-    """Check if a multipolygon feature only has a single polygon."""
+    """Check if a multipolygon only has a single polygon."""
     if not geom.GetGeometryType() == _ogr.wkbMultiPolygon:
         raise ValueError("Input feature must be of type MultiPolygon.")
     return geom.GetGeometryCount() == 1
@@ -31,19 +32,6 @@ def polygon_has_holes(geom: _ogr.Geometry) -> bool:
     if not geom.GetGeometryType() == _ogr.wkbPolygon:
         raise ValueError("Input feature must be of type Polygon.")
     return geom.GetGeometryCount() > 1
-
-
-def multipolygon_to_polygon_feature(feat: _ogr.Feature):
-    if not feat.geometry().GetGeometryType() == _ogr.wkbMultiPolygon:
-        raise ValueError("Input feature must be of type MultiPolygon.")
-    if not mp_has_single_polygon(feat.geometry()):
-        raise ValueError(
-            "Cannot convert MultiPolygon to Polygon. More than one polygon found."
-        )
-    polygon = cast(_ogr.Geometry, feat.geometry().GetGeometryRef(0))
-    result = cast(_ogr.Feature, feat.Clone())
-    result.SetGeometry(polygon)
-    return result
 
 
 def validate_osm_feature(feat: _ogr.Feature):
