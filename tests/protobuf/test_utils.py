@@ -1,12 +1,12 @@
 from osgeo import ogr
 
-from thesis import protobuf
-from thesis.protobuf import utils
+from thesis import gisevents
+from thesis.gisevents import utils
 
 
 def test_to_point_message():
     point = ogr.CreateGeometryFromWkt("POINT (1 2)")
-    want = protobuf.Point(lon=10000000, lat=20000000)
+    want = gisevents.Point(lon=10000000, lat=20000000)
 
     got = utils.to_point_message(point)
 
@@ -16,7 +16,7 @@ def test_to_point_message():
 
 def test_to_linestring_message():
     linestring = ogr.CreateGeometryFromWkt("LINESTRING (0 0, 0 1, 1 1, 1 0)")
-    want = protobuf.LineString(lon=[0, 0, 10000000, 0], lat=[0, 10000000, 0, -10000000])
+    want = gisevents.LineString(lon=[0, 0, 10000000, 0], lat=[0, 10000000, 0, -10000000])
 
     got = utils.to_linestring_message(linestring)
 
@@ -28,7 +28,7 @@ def test_toPolygonMessage():
     # Arrange
     polygon = ogr.CreateGeometryFromWkt("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
 
-    want = protobuf.Polygon(
+    want = gisevents.Polygon(
         lon=[0, 0, 10000000, 0, -10000000], lat=[0, 10000000, 0, -10000000, 0]
     )
     # Act

@@ -9,7 +9,7 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo.ogr import Feature
 
 import thesis.events as events
-from thesis import protobuf
+from thesis import gisevents
 
 
 class TestCreateCreationEvent:
@@ -126,10 +126,10 @@ class TestCreateModEvent:
     def test_modification_event_point(
         self, point_feature_1: Feature, point_feature_1_v2: Feature
     ):
-        want = protobuf.ModificationEvent(
+        want = gisevents.ModificationEvent(
             id=1,
             version=2,
-            point_patch=protobuf.Point(lon=10000000, lat=10000000),
+            point_patch=gisevents.Point(lon=10000000, lat=10000000),
             timestamp=Timestamp(),
         )
         want.timestamp.FromDatetime(
@@ -148,22 +148,22 @@ class TestCreateModEvent:
     def test_create_mod_event_changing_linestring_value(
         self, linestring_feature_2_v1: Feature, linestring_feature_2_v2: Feature
     ):
-        want = protobuf.ModificationEvent(
+        want = gisevents.ModificationEvent(
             id=1,
             version=2,
-            linestring_patch=protobuf.LineStringPatch(
+            linestring_patch=gisevents.LineStringPatch(
                 index=[0, 2, 5, 6],
                 command=[
-                    protobuf.LineStringPatch.CHANGE,
-                    protobuf.LineStringPatch.DELETE,
-                    protobuf.LineStringPatch.DELETE,
-                    protobuf.LineStringPatch.INSERT,
+                    gisevents.LineStringPatch.CHANGE,
+                    gisevents.LineStringPatch.DELETE,
+                    gisevents.LineStringPatch.DELETE,
+                    gisevents.LineStringPatch.INSERT,
                 ],
                 vector=[
-                    protobuf.Point(lat=20000000, lon=20000000),
-                    protobuf.Point(lat=0, lon=0),  # default NULL value
-                    protobuf.Point(lat=0, lon=0),  # default NULL value
-                    protobuf.Point(lat=20000000, lon=20000000),
+                    gisevents.Point(lat=20000000, lon=20000000),
+                    gisevents.Point(lat=0, lon=0),  # default NULL value
+                    gisevents.Point(lat=0, lon=0),  # default NULL value
+                    gisevents.Point(lat=20000000, lon=20000000),
                 ],
             ),
             timestamp=Timestamp(),

@@ -1,5 +1,6 @@
+import pytest
 from thesis.osm import ElementType
-from thesis import utils, geodiff, protobuf
+from thesis import utils, geodiff, gisevents
 
 
 def test_get_search_layers_for_node():
@@ -31,15 +32,20 @@ def test_to_linestringpatch_message():
 
     got = utils.to_lspatch_message(patch)
     assert got.command == [
-        protobuf.LineStringPatch.CHANGE,
-        protobuf.LineStringPatch.DELETE,
-        protobuf.LineStringPatch.DELETE,
-        protobuf.LineStringPatch.INSERT,
+        gisevents.LineStringPatch.CHANGE,
+        gisevents.LineStringPatch.DELETE,
+        gisevents.LineStringPatch.DELETE,
+        gisevents.LineStringPatch.INSERT,
     ]
     assert got.index == [0, 2, 5, 6]
     assert list(got.vector) == [
-        protobuf.Point(lon=20000000, lat=20000000),
-        protobuf.Point(lon=0, lat=0),
-        protobuf.Point(lon=0, lat=0),
-        protobuf.Point(lon=20000000, lat=20000000),
+        gisevents.Point(lon=20000000, lat=20000000),
+        gisevents.Point(lon=0, lat=0),
+        gisevents.Point(lon=0, lat=0),
+        gisevents.Point(lon=20000000, lat=20000000),
     ]
+
+
+@pytest.mark.xfail(reason="Not implemented")
+def test_to_polygonpatch_message():
+    assert False

@@ -3,7 +3,7 @@ import warnings
 from pathlib import Path
 from typing import Optional, Sequence
 
-from thesis.protobuf import CreationEvent, DeletionEvent, ModificationEvent
+from thesis.gisevents import CreationEvent, DeletionEvent, ModificationEvent
 
 logging.basicConfig(level=logging.INFO)
 

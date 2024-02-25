@@ -6,7 +6,7 @@ from typing import Optional, cast
 from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo import ogr
 
-from thesis import geo, protobuf
+from thesis import geo, gisevents
 from thesis.api.event_store import write_events
 from thesis.geodiff import geodiff
 from thesis.utils import get_prop_patch
@@ -16,7 +16,7 @@ _logger = logging.getLogger(__name__)
 _validate_creation_event_args = geo.validate_osm_feature
 
 
-def creation_event(feature: ogr.Feature) -> protobuf.CreationEvent:
+def creation_event(feature: ogr.Feature) -> gisevents.CreationEvent:
     """Create a new Creation event from an ogr feature."""
 
     try:
@@ -25,7 +25,7 @@ def creation_event(feature: ogr.Feature) -> protobuf.CreationEvent:
         raise
 
     # Initialize event
-    event = protobuf.CreationEvent()
+    event = gisevents.CreationEvent()
 
     # FID
     fid: int = feature.GetFID()
@@ -53,13 +53,13 @@ def creation_event(feature: ogr.Feature) -> protobuf.CreationEvent:
     geom: ogr.Geometry = feature.GetGeometryRef()
     match geom.GetGeometryType():
         case ogr.wkbPoint:
-            point_msg = protobuf.to_point_message(geom)
+            point_msg = gisevents.to_point_message(geom)
             event.point.CopyFrom(point_msg)
         case ogr.wkbLineString:
-            ls_msg = protobuf.to_linestring_message(geom)
+            ls_msg = gisevents.to_linestring_message(geom)
             event.linestring.CopyFrom(ls_msg)
         case ogr.wkbPolygon:
-            p_msg = protobuf.to_polygon_message(geom)
+            p_msg = gisevents.to_polygon_message(geom)
             event.polygon.CopyFrom(p_msg)
         case _:
             raise ValueError(f"Unsupported geometry type: {geom.GetGeometryType()}")
@@ -92,7 +92,7 @@ def _validate_modification_args(prev_feature: ogr.Feature, curr_feature: ogr.Fea
 
 def modification_event(
     prev_feature: ogr.Feature, curr_feature: ogr.Feature
-) -> protobuf.ModificationEvent:
+) -> gisevents.ModificationEvent:
     """Create a new ModificationEvent from two versions of a feature.
 
     A modification event is a description of how to transform a feature from
@@ -107,7 +107,7 @@ def modification_event(
     except Exception:
         raise
 
-    event = protobuf.ModificationEvent()
+    event = gisevents.ModificationEvent()
 
     event.id = prev_feature.GetFID()
     event.version = curr_feature.GetFieldAsInteger("osm_version")
@@ -120,7 +120,7 @@ def modification_event(
         # FIXME: Fix this
         # if isinstance(patch, tuple[float, float]):
         #     event.point_patch.CopyFrom(patch)
-        # elif isinstance(patch, protobuf.LineStringPatch):
+        # elif isinstance(patch, gisevents.LineStringPatch):
         #     event.linestring_patch.CopyFrom(patch)
 
     prop_patch = get_prop_patch(prev_feature, curr_feature)
@@ -135,7 +135,7 @@ def modification_event(
 
 
 # TODO: Implement
-def deletion_event(feature: ogr.Feature) -> protobuf.DeletionEvent:
+def deletion_event(feature: ogr.Feature) -> gisevents.DeletionEvent:
     raise NotImplementedError()
 
 
@@ -146,7 +146,7 @@ def initialize_eventstore_from_snapshot(gpkg_fpath: str):
     Thus, all events will be creation events.
     """
     _logger.info("Initializing event store")
-    events: list[protobuf.CreationEvent] = []
+    events: list[gisevents.CreationEvent] = []
     with ogr.Open(gpkg_fpath, driver="GPKG") as ds:
         for layer_name in ["points", "lines", "linearrings"]:
             layer = cast(ogr.Layer, ds.GetLayerByName(layer_name))

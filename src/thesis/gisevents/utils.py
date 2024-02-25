@@ -2,16 +2,16 @@ from typing import cast
 
 from osgeo import ogr
 
-from thesis import geo, protobuf
+from thesis import geo, gisevents
 
 
-def to_point_message(geom: ogr.Geometry) -> protobuf.Point:
+def to_point_message(geom: ogr.Geometry) -> gisevents.Point:
     try:
         geo.validate_point(geom)
     except Exception:
         raise
 
-    return protobuf.Point(
+    return gisevents.Point(
         lon=geo.to100nano(geom.GetX()), lat=geo.to100nano(geom.GetY())
     )
 
@@ -31,8 +31,8 @@ def _get_deltas(geom: ogr.Geometry) -> tuple[list[int], list[int]]:
     return delta_lon, delta_lat
 
 
-def to_linestring_message(geom: ogr.Geometry) -> protobuf.LineString:
-    """Convert LineString geometry to a protobuf message.
+def to_linestring_message(geom: ogr.Geometry) -> gisevents.LineString:
+    """Convert LineString geometry to a gisevents message.
 
     The coordinates are converted to units of 100 nano degrees and delta code coordinates.
     """
@@ -42,10 +42,10 @@ def to_linestring_message(geom: ogr.Geometry) -> protobuf.LineString:
         raise
 
     delta_lon, delta_lat = _get_deltas(geom)
-    return protobuf.LineString(lon=delta_lon, lat=delta_lat)
+    return gisevents.LineString(lon=delta_lon, lat=delta_lat)
 
 
-def to_polygon_message(geom: ogr.Geometry) -> protobuf.Polygon:
+def to_polygon_message(geom: ogr.Geometry) -> gisevents.Polygon:
     try:
         geo.validate_polygon(geom)
     except Exception:
@@ -54,4 +54,4 @@ def to_polygon_message(geom: ogr.Geometry) -> protobuf.Polygon:
     ring = cast(ogr.Geometry, geom.GetGeometryRef(0))
     delta_lon, delta_lat = _get_deltas(ring)
 
-    return protobuf.Polygon(lon=delta_lon, lat=delta_lat)
+    return gisevents.Polygon(lon=delta_lon, lat=delta_lat)

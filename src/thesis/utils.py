@@ -4,7 +4,7 @@ from osgeo import ogr
 from shapely import GeometryType, LineString, Point, from_wkt, get_type_id
 from shapely.geometry.base import BaseGeometry
 
-from thesis import geo, protobuf
+from thesis import geo, gisevents
 from thesis.geodiff import geodiff
 from thesis.osm import ElementType
 
@@ -18,37 +18,37 @@ def get_search_layers(osm_type: ElementType):
             return ["lines", "rings"]
 
 
-def to_point_message(point: tuple[float, float]) -> protobuf.Point:
-    """Convert a point tuple to a protobuf message."""
+def to_point_message(point: tuple[float, float]) -> gisevents.Point:
+    """Convert a point tuple to a gisevents message."""
     ilon = geo.to100nano(point[0])
     ilat = geo.to100nano(point[1])
-    return protobuf.Point(lat=ilat, lon=ilon)
+    return gisevents.Point(lat=ilat, lon=ilon)
 
 
-def to_lspatch_message(patch: geodiff.LSPatch) -> protobuf.LineStringPatch:
-    command: list[protobuf.LineStringPatch.Command] = []
+def to_lspatch_message(patch: geodiff.LSPatch) -> gisevents.LineStringPatch:
+    command: list[gisevents.LineStringPatch.Command] = []
     index: list[int] = []
-    vector: list[protobuf.Point] = []
+    vector: list[gisevents.Point] = []
 
     to_command = {
-        "insert": protobuf.LineStringPatch.INSERT,
-        "change": protobuf.LineStringPatch.CHANGE,
-        "delete": protobuf.LineStringPatch.DELETE,
+        "insert": gisevents.LineStringPatch.INSERT,
+        "change": gisevents.LineStringPatch.CHANGE,
+        "delete": gisevents.LineStringPatch.DELETE,
     }
 
     for patch_cmd in patch:
         index.append(patch_cmd[0])
         command.append(to_command[patch_cmd[1]])
         if patch_cmd[1] == "delete":
-            vector.append(protobuf.Point(lon=0, lat=0))
+            vector.append(gisevents.Point(lon=0, lat=0))
         else:
             vector.append(to_point_message(patch_cmd[2]))
 
-    result = protobuf.LineStringPatch(command=command, index=index, vector=vector)
+    result = gisevents.LineStringPatch(command=command, index=index, vector=vector)
     return result
 
 
-def get_pointdiff_message(a: Point, b: Point) -> protobuf.Point:
+def get_pointdiff_message(a: Point, b: Point) -> gisevents.Point:
     """Calculate the difference between two points.
 
     RETURNS:
@@ -59,15 +59,15 @@ def get_pointdiff_message(a: Point, b: Point) -> protobuf.Point:
     lon = pointdiff[1]
     ilat = geo.to100nano(lat)
     ilon = geo.to100nano(lon)
-    return protobuf.Point(lat=ilat, lon=ilon)
+    return gisevents.Point(lat=ilat, lon=ilon)
 
 
 def get_linediff_message(a: LineString, b: LineString):
     patch = geodiff.diff_linestrings(a, b)
     N = len(patch)
     indeces = [0] * N
-    commands = [protobuf.LineStringPatch.Command.CHANGE] * N
-    diff_vectors = [protobuf.Point()] * N
+    commands = [gisevents.LineStringPatch.Command.CHANGE] * N
+    diff_vectors = [gisevents.Point()] * N
     for i, cmd in enumerate(patch):
         index = cmd[0]
         indeces[i] = index
@@ -76,20 +76,20 @@ def get_linediff_message(a: LineString, b: LineString):
             # Is insert or change command
             point = cmd[2]
             ilat, ilon = (geo.to100nano(point[0]), geo.to100nano(point[1]))
-            diff_vector = protobuf.Point(lat=ilat, lon=ilon)
+            diff_vector = gisevents.Point(lat=ilat, lon=ilon)
             diff_vectors[i] = diff_vector
 
         match name:
             case "insert":
-                commands[i] = protobuf.LineStringPatch.Command.INSERT
+                commands[i] = gisevents.LineStringPatch.Command.INSERT
             case "change":
-                commands[i] = protobuf.LineStringPatch.Command.CHANGE
+                commands[i] = gisevents.LineStringPatch.Command.CHANGE
             case "delete":
-                commands[i] = protobuf.LineStringPatch.Command.DELETE
+                commands[i] = gisevents.LineStringPatch.Command.DELETE
             case _:
                 raise ValueError(f"Unexpected command name: {name}")
 
-    return protobuf.LineStringPatch(
+    return gisevents.LineStringPatch(
         index=indeces, command=commands, vector=diff_vectors
     )
 
