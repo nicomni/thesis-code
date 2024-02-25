@@ -128,18 +128,6 @@ def get_all_features(gpkg_fpath: FileName, layer_name: str):
         return [cast(ogr.Feature, feat) for feat in layer]
 
 
-def remove_layers(gpkg_file_path: str, *args: str):
-    with ogr.Open(gpkg_file_path, 1) as ds:
-        ds = cast(ogr.DataSource, ds)
-        i = 0
-        while i < ds.GetLayerCount():
-            layer = cast(ogr.Layer, ds.GetLayer(i))
-            if layer.GetName() in args:
-                ds.DeleteLayer(i)
-            else:
-                i += 1
-
-
 def _find_feature(
     ds: ogr.DataSource, identifier: osm.ElementIdentifier
 ) -> ogr.Feature | None:
