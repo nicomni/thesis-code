@@ -92,3 +92,6 @@ addopts = [
 filterwarnings = [
   "ignore:.*tp_new.*Python 3.14.*:DeprecationWarning",
 ]
+
+[tool.pyright]
+include = ["src", "tests"]
