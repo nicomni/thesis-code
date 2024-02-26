@@ -9,7 +9,7 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo.ogr import Feature
 
 import thesis.events as events
-from thesis import gisevents
+from thesis import gisevents, geodiff
 
 
 class TestCreateCreationEvent:
@@ -110,7 +110,8 @@ class TestCreateModEvent:
         self, point_feature_1: Feature, linestring_feature_2_v2: Feature
     ):
         with pytest.raises(
-            ValueError, match="Geometry type mismatch: POINT and LINESTRING"
+            geodiff.GeometryTypeMismatchError,
+            match="Geometry type mismatch: POINT != LINESTRING",
         ):
             events._validate_modification_args(point_feature_1, linestring_feature_2_v2)
 

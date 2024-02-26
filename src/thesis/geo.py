@@ -4,7 +4,6 @@ from typing import Sequence, TypeGuard, cast
 
 from osgeo import ogr as _ogr
 
-from thesis.geodiff import diff
 
 Coordinates = list[tuple[float, float]]
 IntCoords = list[tuple[int, int]]
@@ -116,8 +115,3 @@ def is_linestring(geom: _ogr.Geometry) -> bool:
 
 def is_linearring(geom: _ogr.Geometry) -> bool:
     return geom.GetGeometryType() == _ogr.wkbLinearRing
-
-
-def diff_geometries(geom1: _ogr.Geometry, geom2: _ogr.Geometry):
-    """Calculate the patch that transforms geom1 into geom2."""
-    return diff(geom1.ExportToWkt(), geom2.ExportToWkt())

@@ -1,14 +1,11 @@
-from shapely.geometry.base import BaseGeometry
-
-
 class GeometryTypeMismatchError(Exception):
-    def __init__(self, geom1: BaseGeometry, geom2: BaseGeometry):
-        self._geom1 = geom1
-        self._geom2 = geom2
+    def __init__(self, geom_type_1: str, geom_type_2: str):
+        self._gtype1 = geom_type_1
+        self._gtype2 = geom_type_2
         super().__init__()
 
     def __str__(self):
-        return f"Geometry type mismatch: {self._geom1.geom_type} != {self._geom2.geom_type}"
+        return f"Geometry type mismatch: {self._gtype1} != {self._gtype2}"
 
 
 class UnexpectedEditCommandTypeError(Exception):

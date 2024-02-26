@@ -6,10 +6,8 @@ from typing import Optional, cast
 from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo import ogr
 
-from thesis import geo, gisevents
+from thesis import geo, gisevents, utils, geodiff
 from thesis.api import event_store
-from thesis.geodiff import geodiff
-from thesis.geodiff.errors import GeometryTypeMismatchError
 
 _logger = logging.getLogger(__name__)
 
@@ -79,7 +77,7 @@ def _validate_modification_args(prev_feature: ogr.Feature, curr_feature: ogr.Fea
     ):
         gtype1 = prev_feature.GetGeometryRef().GetGeometryName()
         gtype2 = curr_feature.GetGeometryRef().GetGeometryName()
-        raise GeometryTypeMismatchError(gtype1, gtype2)
+        raise geodiff.GeometryTypeMismatchError(gtype1, gtype2)
     # Check versions
     prev_version = prev_feature.GetFieldAsInteger("osm_version")
     curr_version = curr_feature.GetFieldAsInteger("osm_version")
