@@ -122,27 +122,20 @@ class TestCreateModEvent:
         ):
             events.modification_event(point_feature_1, point_feature_1)
 
-    @pytest.mark.xfail(reason="Not fixed")
     def test_modification_event_point(
         self, point_feature_1: Feature, point_feature_1_v2: Feature
     ):
-        want = gisevents.ModificationEvent(
-            id=1,
-            version=2,
-            point_patch=gisevents.Point(lon=10000000, lat=10000000),
-            timestamp=Timestamp(),
-        )
-        want.timestamp.FromDatetime(
-            datetime.fromisoformat(
-                point_feature_1_v2.GetFieldAsISO8601DateTime("osm_timestamp")
-            )
-        )
         got = events.modification_event(point_feature_1, point_feature_1_v2)
-        assert got.id == want.id
-        assert got.version == want.version
-        assert got.point_patch.lat == want.point_patch.lat
-        assert got.point_patch.lon == want.point_patch.lon
+
+        assert got.id == 1
+        assert (
+            got.timestamp.ToDatetime().isoformat()
+            == datetime(2023, 1, 1, 0, 0, 0).isoformat()
+        )
+        assert got.version == 2
+        assert got.HasField("point_patch")
         assert not got.HasField("prop_patch")
+        # Point patch and property patch have own tests
 
     @pytest.mark.xfail(reason="Not fixed")
     def test_create_mod_event_changing_linestring_value(

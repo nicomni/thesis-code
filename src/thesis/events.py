@@ -111,18 +111,24 @@ def modification_event(
 
     event.id = prev_feature.GetFID()
     event.version = curr_feature.GetFieldAsInteger("osm_version")
+    event.timestamp.FromDatetime(
+        datetime.fromisoformat(curr_feature.GetFieldAsISO8601DateTime("osm_timestamp"))
+    )
 
     prev_geom = cast(ogr.Geometry, prev_feature.GetGeometryRef())
     curr_geom = cast(ogr.Geometry, curr_feature.GetGeometryRef())
-    if not curr_geom.Equals(prev_geom):
-        patch = geodiff.diff(prev_geom.ExportToWkt(), curr_geom.ExportToWkt())
 
-        # FIXME: Fix this
-        # if isinstance(patch, tuple[float, float]):
-        #     event.point_patch.CopyFrom(patch)
-        # elif isinstance(patch, gisevents.LineStringPatch):
-        #     event.linestring_patch.CopyFrom(patch)
+    prev_geom_wkt = prev_geom.ExportToWkt()
+    curr_geom_wkt = curr_geom.ExportToWkt()
 
+    geom_type = cast(int, prev_geom.GetGeometryType())
+    match geom_type:
+        case ogr.wkbPoint:
+            point_diff = geodiff.diff_points(prev_geom_wkt, curr_geom_wkt)
+            point_msg = utils.to_point_message(point_diff)
+            event.point_patch.CopyFrom(point_msg)
+        case _:
+            raise TypeError(f"Unsupported geometry type: {geom_type}")
     # Check properties
     prev_props: dict = json.loads(prev_feature.GetFieldAsString("all_tags"))
     curr_props: dict = json.loads(curr_feature.GetFieldAsString("all_tags"))
