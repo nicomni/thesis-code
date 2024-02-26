@@ -9,7 +9,6 @@ from osgeo import ogr
 from thesis import geo, gisevents
 from thesis.api import event_store
 from thesis.geodiff import geodiff
-from thesis.utils import get_prop_patch
 
 _logger = logging.getLogger(__name__)
 
@@ -123,7 +122,6 @@ def modification_event(
         # elif isinstance(patch, gisevents.LineStringPatch):
         #     event.linestring_patch.CopyFrom(patch)
 
-    prop_patch = get_prop_patch(prev_feature, curr_feature)
     # Check properties
     prev_props: dict = json.loads(prev_feature.GetFieldAsString("all_tags"))
     curr_props: dict = json.loads(curr_feature.GetFieldAsString("all_tags"))

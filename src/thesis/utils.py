@@ -44,12 +44,3 @@ def to_lspatch_message(patch: geodiff.LSPatch) -> gisevents.LineStringPatch:
 
     result = gisevents.LineStringPatch(command=command, index=index, vector=vector)
     return result
-
-
-def get_prop_patch(prev: ogr.Feature, curr: ogr.Feature):
-    # Check properties
-    prev_props: dict = json.loads(prev.GetFieldAsString("all_tags"))
-    curr_props: dict = json.loads(curr.GetFieldAsString("all_tags"))
-    if prev_props != curr_props:
-        # TODO: Create a diff
-        raise NotImplementedError()
