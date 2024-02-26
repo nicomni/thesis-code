@@ -110,7 +110,7 @@ def diff_points(a: Point | Wkt, b: Point | Wkt) -> tuple[float, float]:
     if isinstance(b, Wkt):
         b = cast(Point, from_wkt(b))
 
-    if a.geom_type() != "Point" or b.get_type_id() != "Point":
+    if a.geom_type != "Point" or b.geom_type != "Point":
         raise ValueError("Both arguments must be of type Point.")
     return (b.x - a.x, b.y - a.y)
 
