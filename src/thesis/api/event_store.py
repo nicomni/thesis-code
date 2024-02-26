@@ -1,3 +1,4 @@
+from io import BufferedWriter
 import logging
 import warnings
 from pathlib import Path
@@ -14,6 +15,9 @@ DEFAULT_CONFIG = {
 _config = DEFAULT_CONFIG.copy()
 
 _configured = False
+_initialized = False
+
+_writer: BufferedWriter
 
 
 def configure(config: Optional[dict] = None):
@@ -28,9 +32,9 @@ def configure(config: Optional[dict] = None):
     _configured = True
 
 
-def write_events(events: Sequence[CreationEvent | ModificationEvent | DeletionEvent]):
-    global _config
-    outpath = _config["event_store_path"]
-    with open(outpath, "wb") as event_store:
-        for event in events:
-            event_store.write(event.SerializeToString())
+def write_events(*events: CreationEvent | ModificationEvent | DeletionEvent):
+    if not _initialized:
+        raise RuntimeError("Event store not initialized")
+    global _writer
+    for event in events:
+        _writer.write(event.SerializeToString())
