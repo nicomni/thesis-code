@@ -1,5 +1,6 @@
 # vim: foldlevel=0
 from itertools import chain
+from typing import cast
 
 from shapely import GeometryType, LineString, Point, from_wkt, get_type_id
 
@@ -72,22 +73,28 @@ def diff(a: Wkt, b: Wkt):
             )
 
 
-def diff_linestrings(a: LineString, b: LineString) -> LSPatch:
+def diff_linestrings(a: LineString | Wkt, b: LineString | Wkt) -> LSPatch:
     """Calculate a diff between linestrings 'a' and 'b'"""
+    if isinstance(a, Wkt):
+        a = cast(LineString, from_wkt(a))
+    if isinstance(b, Wkt):
+        b = cast(LineString, from_wkt(b))
+
+    if a.geom_type() != "LineString" or b.get_type_id() != "LineString":
+        raise ValueError("Both arguments must be of type LineString.")
+
     if a.is_empty and b.is_empty:
         return []
     if a.equals_exact(b, tolerance=1e-7):
         return []
-    coords_a = list(a.coords)
-    coords_b = list(b.coords)
-    assert is_point_sequence(coords_a)
-    assert is_point_sequence(coords_b)
+    coords_a = cast(PointSequence, list(a.coords))
+    coords_b = cast(PointSequence, list(b.coords))
     ses = _shortest_edit_script(coords_a, coords_b, 0, 0)
     patch = _clean_up_edit_script(ses, coords_a)
     return patch
 
 
-def diff_points(a: Point, b: Point) -> Vector2D:
+def diff_points(a: Point | Wkt, b: Point | Wkt) -> tuple[float, float]:
     """Calculate a diff between two points
     Parameters
     ----------
@@ -95,11 +102,17 @@ def diff_points(a: Point, b: Point) -> Vector2D:
 
     Returns
     -------
-    Vector2D
+    tuple
         The return value is a 2D vector representation the difference.
     """
-    result: Vector2D = (b.x - a.x, b.y - a.y)
-    return result
+    if isinstance(a, Wkt):
+        a = cast(Point, from_wkt(a))
+    if isinstance(b, Wkt):
+        b = cast(Point, from_wkt(b))
+
+    if a.geom_type() != "Point" or b.get_type_id() != "Point":
+        raise ValueError("Both arguments must be of type Point.")
+    return (b.x - a.x, b.y - a.y)
 
 
 # TODO: Complete docstring for D
