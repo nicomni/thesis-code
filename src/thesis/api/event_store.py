@@ -12,8 +12,9 @@ DEFAULT_CONFIG = {
     "event_store_path": Path("events.pbf"),
 }
 
-_config = DEFAULT_CONFIG.copy()
+_logger = logging.getLogger(__name__)
 
+_config = DEFAULT_CONFIG.copy()
 _configured = False
 _initialized = False
 
@@ -38,3 +39,23 @@ def write_events(*events: CreationEvent | ModificationEvent | DeletionEvent):
     global _writer
     for event in events:
         _writer.write(event.SerializeToString())
+
+
+def init(config: Optional[dict] = None):
+    if _initialized:
+        _logger.warning("Event store already initialized")
+        return -1
+    if _configured and config is not None:
+        global _config
+        _config.update(config)
+    else:
+        configure(config)
+
+    global _writer
+    _writer = open(_config["event_store_path"], "wb").__enter__()
+
+
+def teardown():
+    if _initialized:
+        global _writer
+        _writer.__exit__(None, None, None)
