@@ -7,7 +7,7 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo import ogr
 
 from thesis import geo, gisevents
-from thesis.api.event_store import write_events
+from thesis.api import event_store
 from thesis.geodiff import geodiff
 from thesis.utils import get_prop_patch
 
@@ -155,4 +155,4 @@ def initialize_eventstore_from_snapshot(gpkg_fpath: str):
                 event = creation_event(feature)
                 events.append(event)
 
-    write_events(events)
+    event_store.write_events(*events)
