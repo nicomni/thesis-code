@@ -1,3 +1,3 @@
-from . import osc
+from . import osc, event_store
 
-__all__ = ("osc",)
+__all__ = ("osc", "event_store")

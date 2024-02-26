@@ -2,8 +2,16 @@ import json
 from datetime import datetime
 
 import pytest
-from osgeo.ogr import (CreateGeometryFromWkt, Feature, FeatureDefn, FieldDefn,
-                       Geometry, OFTDateTime, OFTInteger, OFTString)
+from osgeo.ogr import (
+    CreateGeometryFromWkt,
+    Feature,
+    FeatureDefn,
+    FieldDefn,
+    Geometry,
+    OFTDateTime,
+    OFTInteger,
+    OFTString,
+)
 
 
 @pytest.fixture
@@ -14,16 +22,6 @@ def timestamp_0():
 @pytest.fixture
 def timestamp_1():
     return datetime(2023, 1, 2, 0, 0, 0)
-
-
-@pytest.fixture
-def point_1_1():
-    return CreateGeometryFromWkt("POINT (1 1)")
-
-
-@pytest.fixture
-def point_2_2():
-    return CreateGeometryFromWkt("POINT (2 2)")
 
 
 @pytest.fixture
@@ -38,61 +36,63 @@ def base_featdef():
 
 
 @pytest.fixture
-def point_feature_1(
-    base_featdef: FeatureDefn, point_1_1: Geometry, timestamp_0: datetime
-):
+def point_feature_1(base_featdef: FeatureDefn, timestamp_0: datetime):
+    point = CreateGeometryFromWkt("POINT (1 2)")
     # Feature
     feat = Feature(base_featdef)
     feat.SetFID(1)
     feat.SetField("osm_timestamp", timestamp_0.isoformat())
     feat.SetField("osm_version", 1)
     feat.SetField("all_tags", json.dumps({"key": "value"}))
-    feat.SetGeometry(point_1_1)
+    feat.SetGeometry(point)
     return feat
 
 
 @pytest.fixture
-def point_feature_1_v2(
-    base_featdef: FeatureDefn, point_2_2: Geometry, timestamp_1: datetime
-):
+def point_feature_1_v2(base_featdef: FeatureDefn):
+    point = CreateGeometryFromWkt("POINT (2 1)")
+    timestamp = datetime(2023, 1, 1, 0, 0, 0)
     # Feature
     feat = Feature(base_featdef)
     feat.SetFID(1)
-    feat.SetField("osm_timestamp", timestamp_1.isoformat())
+    feat.SetField("osm_timestamp", timestamp.isoformat())
     feat.SetField("osm_version", 2)
     feat.SetField("all_tags", json.dumps({"key": "value"}))
-    feat.SetGeometry(point_2_2)
+    feat.SetGeometry(point)
     return feat
 
 
 @pytest.fixture
-def point_feature_2(
-    base_featdef: FeatureDefn, point_2_2: Geometry, timestamp_1: datetime
-):
+def point_feature_2(base_featdef: FeatureDefn, timestamp_1: datetime):
+    point = CreateGeometryFromWkt("POINT (2 -2)")
     feat = Feature(base_featdef)
     feat.SetFID(2)
     feat.SetField("osm_timestamp", timestamp_1.isoformat())
     feat.SetField("osm_version", 1)
     feat.SetField("all_tags", json.dumps({"key": "value"}))
-    feat.SetGeometry(point_2_2)
+    feat.SetGeometry(point)
     return feat
 
 
 @pytest.fixture
-def point_feature_without_timestamp(base_featdef: Feature, point_1_1: Geometry):
+def point_feature_without_timestamp(
+    base_featdef: Feature,
+):
+    point = CreateGeometryFromWkt("POINT (1 1)")
     feat = Feature(base_featdef)
     feat.SetFID(1)
     feat.SetField("osm_version", 1)
-    feat.SetGeometry(point_1_1)
+    feat.SetGeometry(point)
     return feat
 
 
 @pytest.fixture
-def point_feature_without_version(base_featdef, point_1_1):
+def point_feature_without_version(base_featdef):
+    point = CreateGeometryFromWkt("POINT (1 1)")
     feat = Feature(base_featdef)
     feat.SetFID(1)
     feat.SetField("osm_timestamp", 2023, 1, 19, 0, 0, 0.0, 0)
-    feat.SetGeometry(point_1_1)
+    feat.SetGeometry(point)
     return feat
 
 
