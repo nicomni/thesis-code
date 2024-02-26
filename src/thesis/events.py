@@ -9,6 +9,7 @@ from osgeo import ogr
 from thesis import geo, gisevents
 from thesis.api import event_store
 from thesis.geodiff import geodiff
+from thesis.geodiff.errors import GeometryTypeMismatchError
 
 _logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def _validate_modification_args(prev_feature: ogr.Feature, curr_feature: ogr.Fea
     ):
         gtype1 = prev_feature.GetGeometryRef().GetGeometryName()
         gtype2 = curr_feature.GetGeometryRef().GetGeometryName()
-        raise ValueError(f"Geometry type mismatch: {gtype1} and {gtype2}")
+        raise GeometryTypeMismatchError(gtype1, gtype2)
     # Check versions
     prev_version = prev_feature.GetFieldAsInteger("osm_version")
     curr_version = curr_feature.GetFieldAsInteger("osm_version")
