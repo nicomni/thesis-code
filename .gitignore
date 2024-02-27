@@ -230,3 +230,4 @@ tags
 [._]*.un~
 
 pyrightconfig.json
+events.pbf
