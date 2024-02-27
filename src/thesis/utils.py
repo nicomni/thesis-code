@@ -1,8 +1,6 @@
-import json
+from typing import Iterable
 
-from osgeo import ogr
-
-from thesis import geo, gisevents
+from thesis import geo, gisevents, properties as props
 from thesis.geodiff import geodiff
 from thesis.osm import ElementType
 
@@ -44,3 +42,33 @@ def to_lspatch_message(patch: geodiff.LSPatch) -> gisevents.LineStringPatch:
 
     result = gisevents.LineStringPatch(command=command, index=index, vector=vector)
     return result
+
+
+def to_prop_patch_msg(patch: Iterable[props.PatchCommand]) -> gisevents.PropPatch:
+    deletes = []
+    update_keys: list[str] = []
+    update_vals: list[str] = []
+    insert_keys: list[str] = []
+    insert_vals: list[str] = []
+    for cmd in patch:
+        ch_type, key, *value = cmd
+        if ch_type is props.ChangeType.DELETE:
+            deletes.append(key)
+        elif ch_type is props.ChangeType.UPDATE:
+            update_keys.append(key)
+            update_vals.append(*value)
+        elif ch_type is props.ChangeType.INSERT:
+            insert_keys.append(key)
+            insert_vals.append(*value)
+    prop_patch = gisevents.PropPatch()
+    if len(deletes) > 0:
+        prop_patch.prop_delete.CopyFrom(gisevents.PropDelete(key=deletes))
+    if len(update_keys) > 0:
+        prop_patch.prop_update.CopyFrom(
+            gisevents.PropUpdate(key=update_keys, value=update_vals)
+        )
+    if len(insert_keys) > 0:
+        prop_patch.prop_insert.CopyFrom(
+            gisevents.PropInsert(key=insert_keys, value=insert_vals)
+        )
+    return prop_patch

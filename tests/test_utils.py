@@ -1,6 +1,7 @@
+from collections.abc import Iterable
 import pytest
 from thesis.osm import ElementType
-from thesis import utils, geodiff, gisevents
+from thesis import properties, utils, geodiff, gisevents
 
 
 def test_get_search_layers_for_node():
@@ -44,6 +45,21 @@ def test_to_linestringpatch_message():
         gisevents.Point(lon=0, lat=0),
         gisevents.Point(lon=20000000, lat=20000000),
     ]
+
+
+def test_to_prop_patch_message():
+    patch: Iterable[properties.PatchCommand] = [
+        (properties.ChangeType.UPDATE, "key1", "value2"),
+        (properties.ChangeType.DELETE, "key3"),
+        (properties.ChangeType.INSERT, "key4", "value4"),
+        (properties.ChangeType.DELETE, "key5"),
+    ]
+    got = utils.to_prop_patch_msg(patch)
+    assert got.prop_delete.key == ["key3", "key5"]
+    assert got.prop_update.key == ["key1"]
+    assert got.prop_update.value == ["value2"]
+    assert got.prop_insert.key == ["key4"]
+    assert got.prop_insert.value == ["value4"]
 
 
 @pytest.mark.xfail(reason="Not implemented")
