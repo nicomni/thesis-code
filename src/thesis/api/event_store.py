@@ -6,8 +6,6 @@ from typing import Optional, Sequence
 
 from thesis.gisevents import CreationEvent, DeletionEvent, ModificationEvent
 
-logging.basicConfig(level=logging.INFO)
-
 DEFAULT_CONFIG = {
     "event_store_path": Path("events.pbf"),
 }
@@ -42,6 +40,7 @@ def write_events(*events: CreationEvent | ModificationEvent | DeletionEvent):
 
 
 def init(config: Optional[dict] = None):
+    global _initialized
     if _initialized:
         _logger.warning("Event store already initialized")
         return -1
@@ -53,9 +52,11 @@ def init(config: Optional[dict] = None):
 
     global _writer
     _writer = open(_config["event_store_path"], "wb").__enter__()
+    _initialized = True
 
 
 def teardown():
+    global _initialized
     if _initialized:
         global _writer
         _writer.__exit__(None, None, None)
