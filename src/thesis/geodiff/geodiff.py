@@ -80,8 +80,13 @@ def diff_linestrings(a: LineString | Wkt, b: LineString | Wkt) -> LSPatch:
     if isinstance(b, Wkt):
         b = cast(LineString, from_wkt(b))
 
-    if a.geom_type != "LineString" or b.geom_type != "LineString":
-        raise ValueError("Both arguments must be of type LineString.")
+    linestring_types = ["LineString", "LinearRing"]
+    if (
+        a.geom_type not in linestring_types
+        or b.geom_type not in linestring_types
+        or a.geom_type != b.geom_type
+    ):
+        raise GeometryTypeMismatchError(a.geom_type, b.geom_type)
 
     if a.is_empty and b.is_empty:
         return []

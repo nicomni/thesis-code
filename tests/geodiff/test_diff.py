@@ -27,7 +27,6 @@ def test_diff_linestring():
     assert got == want
 
 
-@pytest.mark.xfail(reason="Linearrings not supported")
 def test_diff_rings():
     a = "LINEARRING (0 0, 0 1, 1 1, 1 0, 0 0)"
     b = "LINEARRING (0 0, 1 1, 2 1, 0 0)"
