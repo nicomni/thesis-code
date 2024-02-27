@@ -1,3 +1,4 @@
+from datetime import datetime
 import xml.etree.ElementTree as ET
 
 from thesis.osm import ChangeType
@@ -15,4 +16,5 @@ def changed_nodes(osc_file_path: str):
             if element.tag != NODE_ELEMENT_TAG:
                 continue
             node_id = int(element.attrib["id"])
-            yield (node_id, change_type)
+            timestamp = datetime.fromisoformat(element.attrib["timestamp"])
+            yield (node_id, change_type, timestamp)
