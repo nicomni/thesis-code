@@ -135,8 +135,9 @@ class TestCreateModEvent:
         )
         assert got.version == 2
         assert got.HasField("point_patch")
-        assert not got.HasField("prop_patch")
-        # Point patch and property patch have own tests
+        assert got.HasField("prop_patch")
+        assert got.prop_patch.prop_update.key == ["key1"]
+        assert got.prop_patch.prop_update.value == ["value_v2"]
 
     @pytest.mark.xfail(reason="Not fixed")
     def test_create_mod_event_changing_linestring_value(

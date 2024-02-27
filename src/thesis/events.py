@@ -6,7 +6,7 @@ from typing import Optional, cast
 from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo import ogr
 
-from thesis import geo, gisevents, utils, geodiff
+from thesis import geo, gisevents, utils, geodiff, properties as props
 from thesis.api import event_store
 
 _logger = logging.getLogger(__name__)
@@ -127,12 +127,17 @@ def modification_event(
             event.point_patch.CopyFrom(point_msg)
         case _:
             raise TypeError(f"Unsupported geometry type: {geom_type}")
+
     # Check properties
-    prev_props: dict = json.loads(prev_feature.GetFieldAsString("all_tags"))
-    curr_props: dict = json.loads(curr_feature.GetFieldAsString("all_tags"))
+    prev_props: props.Properties = json.loads(
+        prev_feature.GetFieldAsString("all_tags"), object_hook=props.as_string
+    )
+    curr_props: props.Properties = json.loads(
+        curr_feature.GetFieldAsString("all_tags"), object_hook=props.as_string
+    )
     if prev_props != curr_props:
-        # TODO: Create a diff
-        raise NotImplementedError()
+        prop_patch = props.diff(prev_props, curr_props)
+        event.prop_patch.CopyFrom(utils.to_prop_patch_msg(prop_patch))
 
     return event
 

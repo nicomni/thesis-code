@@ -20,6 +20,10 @@ DeleteCommand = tuple[Literal[ChangeType.DELETE], PropKey]
 PatchCommand = InsertCommand | UpdateCommand | DeleteCommand
 
 
+def as_string(obj):
+    return {key: str(val) for key, val in obj.items()}
+
+
 def diff(props_a: Properties, props_b: Properties):
     for key, val in props_a.items():
         if key in props_b and props_b[key] != val:
