@@ -182,3 +182,15 @@ class TestCreateModEvent:
     ):
         # TODO: Implement this test
         assert False
+
+
+class TestCreateDeletionEvent:
+    def test_deletion_event_point(self, point_feature_1: Feature):
+        timestamp = datetime(2023, 1, 1, 0, 0, 0)
+        got = events.deletion_event(point_feature_1, timestamp)
+        assert got.id == 1
+        assert (
+            got.timestamp.ToDatetime().isoformat()
+            == datetime(2023, 1, 1, 0, 0, 0).isoformat()
+        )
+        assert got.version == 1

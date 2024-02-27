@@ -142,9 +142,15 @@ def modification_event(
     return event
 
 
-# TODO: Implement
-def deletion_event(feature: ogr.Feature) -> gisevents.DeletionEvent:
-    raise NotImplementedError()
+def deletion_event(
+    feature: ogr.Feature, timestamp: datetime
+) -> gisevents.DeletionEvent:
+    """Create a new DeletionEvent from an ogr feature."""
+    event = gisevents.DeletionEvent()
+    event.id = feature.GetFID()
+    event.version = feature.GetFieldAsInteger("osm_version")
+    event.timestamp.FromDatetime(timestamp)
+    return event
 
 
 def initialize_eventstore_from_snapshot(gpkg_fpath: str):
