@@ -80,7 +80,7 @@ message PropPatch {
 }
 
 message PropDelete {
-  repeated uint32 key_idx = 1; // Delta coded
+  repeated string key = 1;
 }
 
 message PropAdd {
@@ -91,6 +91,6 @@ message PropAdd {
 
 message PropUpdate {
     // parallell arrays
-    repeated uint32 key_idx = 1;
+    repeated string key= 1;
     repeated string value = 2;
   }

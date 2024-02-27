@@ -114,10 +114,10 @@ class PropPatch(_message.Message):
     def __init__(self, prop_delete: _Optional[_Union[PropDelete, _Mapping]] = ..., prop_add: _Optional[_Union[PropAdd, _Mapping]] = ..., prop_update: _Optional[_Union[PropUpdate, _Mapping]] = ...) -> None: ...
 
 class PropDelete(_message.Message):
-    __slots__ = ("key_idx",)
-    KEY_IDX_FIELD_NUMBER: _ClassVar[int]
-    key_idx: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, key_idx: _Optional[_Iterable[int]] = ...) -> None: ...
+    __slots__ = ("key",)
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    key: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, key: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class PropAdd(_message.Message):
     __slots__ = ("key", "value")
@@ -128,9 +128,9 @@ class PropAdd(_message.Message):
     def __init__(self, key: _Optional[_Iterable[str]] = ..., value: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class PropUpdate(_message.Message):
-    __slots__ = ("key_idx", "value")
-    KEY_IDX_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("key", "value")
+    KEY_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
-    key_idx: _containers.RepeatedScalarFieldContainer[int]
+    key: _containers.RepeatedScalarFieldContainer[str]
     value: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, key_idx: _Optional[_Iterable[int]] = ..., value: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, key: _Optional[_Iterable[str]] = ..., value: _Optional[_Iterable[str]] = ...) -> None: ...
