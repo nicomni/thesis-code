@@ -75,7 +75,7 @@ message LineStringPatch {
 
 message PropPatch {
   PropDelete prop_delete = 1;
-  PropAdd prop_add = 2;
+  PropInsert prop_insert = 2;
   PropUpdate prop_update = 3;
 }
 
@@ -83,7 +83,7 @@ message PropDelete {
   repeated string key = 1;
 }
 
-message PropAdd {
+message PropInsert {
   // parallell arrays
   repeated string key = 1;
   repeated string value = 2;

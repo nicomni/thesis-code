@@ -104,14 +104,14 @@ class LineStringPatch(_message.Message):
     def __init__(self, index: _Optional[_Iterable[int]] = ..., command: _Optional[_Iterable[_Union[LineStringPatch.Command, str]]] = ..., vector: _Optional[_Iterable[_Union[Point, _Mapping]]] = ...) -> None: ...
 
 class PropPatch(_message.Message):
-    __slots__ = ("prop_delete", "prop_add", "prop_update")
+    __slots__ = ("prop_delete", "prop_insert", "prop_update")
     PROP_DELETE_FIELD_NUMBER: _ClassVar[int]
-    PROP_ADD_FIELD_NUMBER: _ClassVar[int]
+    PROP_INSERT_FIELD_NUMBER: _ClassVar[int]
     PROP_UPDATE_FIELD_NUMBER: _ClassVar[int]
     prop_delete: PropDelete
-    prop_add: PropAdd
+    prop_insert: PropInsert
     prop_update: PropUpdate
-    def __init__(self, prop_delete: _Optional[_Union[PropDelete, _Mapping]] = ..., prop_add: _Optional[_Union[PropAdd, _Mapping]] = ..., prop_update: _Optional[_Union[PropUpdate, _Mapping]] = ...) -> None: ...
+    def __init__(self, prop_delete: _Optional[_Union[PropDelete, _Mapping]] = ..., prop_insert: _Optional[_Union[PropInsert, _Mapping]] = ..., prop_update: _Optional[_Union[PropUpdate, _Mapping]] = ...) -> None: ...
 
 class PropDelete(_message.Message):
     __slots__ = ("key",)
@@ -119,7 +119,7 @@ class PropDelete(_message.Message):
     key: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, key: _Optional[_Iterable[str]] = ...) -> None: ...
 
-class PropAdd(_message.Message):
+class PropInsert(_message.Message):
     __slots__ = ("key", "value")
     KEY_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
