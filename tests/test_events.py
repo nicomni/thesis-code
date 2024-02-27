@@ -107,13 +107,13 @@ class TestCreateModEvent:
             events._validate_modification_args(point_feature_1, point_feature_2)
 
     def test_validate_mismatching_geom_type_raises(
-        self, point_feature_1: Feature, linestring_feature_2_v2: Feature
+        self, point_feature_2: Feature, linestring_feature_2_v1: Feature
     ):
         with pytest.raises(
             geodiff.GeometryTypeMismatchError,
             match="Geometry type mismatch: POINT != LINESTRING",
         ):
-            events._validate_modification_args(point_feature_1, linestring_feature_2_v2)
+            events._validate_modification_args(point_feature_2, linestring_feature_2_v1)
 
     def test_validate_mismatching_version_raises(self, point_feature_1: Feature):
         with pytest.raises(
@@ -139,49 +139,17 @@ class TestCreateModEvent:
         assert got.prop_patch.prop_update.key == ["key1"]
         assert got.prop_patch.prop_update.value == ["value_v2"]
 
-    @pytest.mark.xfail(reason="Not fixed")
-    def test_create_mod_event_changing_linestring_value(
+    def test_create_modification_event_linesstring(
         self, linestring_feature_2_v1: Feature, linestring_feature_2_v2: Feature
     ):
-        want = gisevents.ModificationEvent(
-            id=1,
-            version=2,
-            linestring_patch=gisevents.LineStringPatch(
-                index=[0, 2, 5, 6],
-                command=[
-                    gisevents.LineStringPatch.CHANGE,
-                    gisevents.LineStringPatch.DELETE,
-                    gisevents.LineStringPatch.DELETE,
-                    gisevents.LineStringPatch.INSERT,
-                ],
-                vector=[
-                    gisevents.Point(lat=20000000, lon=20000000),
-                    gisevents.Point(lat=0, lon=0),  # default NULL value
-                    gisevents.Point(lat=0, lon=0),  # default NULL value
-                    gisevents.Point(lat=20000000, lon=20000000),
-                ],
-            ),
-            timestamp=Timestamp(),
-        )
-        want.timestamp.FromDatetime(
-            datetime.fromisoformat(
-                linestring_feature_2_v2.GetFieldAsISO8601DateTime("osm_timestamp")
-            )
-        )
-
         got = events.modification_event(
             linestring_feature_2_v1, linestring_feature_2_v2
         )
-        assert got.linestring_patch.index == want.linestring_patch.index
-        assert got.linestring_patch.command == want.linestring_patch.command
-        assert got.linestring_patch.vector == want.linestring_patch.vector
-
-    @pytest.mark.skip(reason="Not implemented")
-    def test_create_mod_event_change_properties(
-        self, point_feature_1_v2: Feature, point_
-    ):
-        # TODO: Implement this test
-        assert False
+        assert got.id == 2
+        assert got.version == 2
+        assert got.timestamp.ToDatetime().isoformat() == "2023-01-02T00:00:00"
+        assert got.HasField("linestring_patch")
+        assert got.HasField("prop_patch")
 
 
 class TestCreateDeletionEvent:

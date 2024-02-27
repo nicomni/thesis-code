@@ -124,23 +124,25 @@ def linestring_cbabac():
 
 
 @pytest.fixture
-def linestring_feature_2_v1(base_featdef, linestring_abcabba, timestamp_0):
+def linestring_feature_2_v1(base_featdef, linestring_abcabba):
+    timestamp = datetime.fromisoformat("2023-01-01T00:00:00")
     feat = Feature(base_featdef)
-    feat.SetFID(1)
-    feat.SetField("osm_timestamp", timestamp_0.isoformat())
+    feat.SetFID(2)
+    feat.SetField("osm_timestamp", timestamp.isoformat())
     feat.SetField("osm_version", 1)
-    feat.SetField("all_tags", json.dumps({"LSkey": "LSvalue"}))
+    feat.SetField("all_tags", json.dumps({"key1": "value1"}))
     feat.SetGeometry(linestring_abcabba)
     return feat
 
 
 @pytest.fixture
-def linestring_feature_2_v2(base_featdef, linestring_cbabac, timestamp_1):
+def linestring_feature_2_v2(base_featdef, linestring_cbabac):
+    timestamp = datetime.fromisoformat("2023-01-02T00:00:00")
     feat = Feature(base_featdef)
-    feat.SetFID(1)
-    feat.SetField("osm_timestamp", timestamp_1.isoformat())
+    feat.SetFID(2)
+    feat.SetField("osm_timestamp", timestamp.isoformat())
     feat.SetField("osm_version", 2)
-    feat.SetField("all_tags", json.dumps({"LSkey": "LSvalue"}))
+    feat.SetField("all_tags", json.dumps({"key1": "value2"}))
     feat.SetGeometry(linestring_cbabac)
     return feat
 

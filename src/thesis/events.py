@@ -116,8 +116,8 @@ def modification_event(
     prev_geom = cast(ogr.Geometry, prev_feature.GetGeometryRef())
     curr_geom = cast(ogr.Geometry, curr_feature.GetGeometryRef())
 
-    prev_geom_wkt = prev_geom.ExportToWkt()
-    curr_geom_wkt = curr_geom.ExportToWkt()
+    prev_geom_wkt = cast(str, prev_geom.ExportToWkt())
+    curr_geom_wkt = cast(str, curr_geom.ExportToWkt())
 
     geom_type = cast(int, prev_geom.GetGeometryType())
     match geom_type:
@@ -125,6 +125,10 @@ def modification_event(
             point_diff = geodiff.diff_points(prev_geom_wkt, curr_geom_wkt)
             point_msg = utils.to_point_message(point_diff)
             event.point_patch.CopyFrom(point_msg)
+        case ogr.wkbLineString:
+            ls_patch = geodiff.diff_linestrings(prev_geom_wkt, curr_geom_wkt)
+            ls_patch_msg = utils.to_lspatch_message(ls_patch)
+            event.linestring_patch.CopyFrom(ls_patch_msg)
         case _:
             raise TypeError(f"Unsupported geometry type: {geom_type}")
 
