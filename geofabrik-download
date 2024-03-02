@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+#
+#
+# A script do download OSM extracts form Geofrabrik.de
+# Version: 0.0.1
+
+set -euo pipefail
+
+parse_params() {
+	if [ $# -ne 1 ]; then
+		echo "Usage: $0 <country>"
+		exit 1
+	fi
+
+	country="$1"
+	local current_time=$(date +%y%m%d)
+	data_dir="osm-data/${country}_${current_time}"
+}
+
+get_download_urls() {
+	local country="$1"
+	local geofabrik_index_url="https://download.geofabrik.de/index-v1-nogeom.json"
+	local jq_filter=".features[] | select(.properties.id == \"${country}\").properties.urls"
+	echo "Getting Geofabrik download index..." 1>&2
+	echo $(curl -sSL "${geofabrik_index_url}" | jq -r "${jq_filter}")
+}
+
+get_latest_replication_sequence_number() {
+	echo "Getting latest sequence number" 1>&2
+	local updates_url="${1:-}"
+	local state_path="${updates_url}/state.txt"
+	echo "Reading state from ${state_path}..." 1>&2
+	local seq_nr_field=$(curl -sSL "${state_path}" | grep "sequenceNumber")
+	local seq_nr
+	IFS='=' read -ra seq_nr <<<"$seq_nr_field"
+	seq_nr=${seq_nr[1]}
+	echo "${seq_nr}"
+}
+
+get_update_index_path_for_sequence_number() {
+	local seq_nr="${1}"
+	local thousands="$(echo "$((seq_nr / 1000))")"
+	local path="000/$(printf "%03d" "$((seq_nr / 1000))")"
+	echo "${path}"
+}
+
+get_update_index_at_url() {
+	local url="$1"
+	echo "Getting update index at path: ${url}" 1>&2
+	echo $(curl -sSL "${url}" | xmllint --html -)
+}
+
+get_first_sub_seq_nr_for_index() {
+	local index="$1"
+	local file_name=$(echo "${index}" | xmllint --html --xpath 'string(//table//tr[4]/td/a/@href)' -)
+	local seq_nr="${file_name%%.*}"
+	echo "${seq_nr}"
+}
+
+get_last_sub_seq_nr_for_index() {
+	local index="$1"
+	local file_name=$(echo "${index}" | xmllint --html --xpath 'string(//table//tr[last()-1]/td/a/@href)' -)
+	local seq_nr="${file_name%%.*}"
+	echo "${seq_nr}"
+}
+
+download_updates() {
+	local url="$1"
+	local first="$2"
+	local last="$3"
+	echo "Downloading updates from seq_nr ${first} to ${last} at: ${url} ..." 1>&2
+	curl -fsLO "${url}/[${first}-${last}].osc.gz" --output-dir "${data_dir}/updates"
+	curl -fsLO "${url}/[${first}-${last}].state.txt" --output-dir "${data_dir}/updates"
+}
+
+get_timestamp_from_state() {
+	local state_file="$1"
+	echo $(grep "timestamp" "${state_file}" | cut -d'=' -f2)
+
+}
+
+get_download_index() {
+	local download_urls="$1"
+	local updates_url=$(echo "${download_urls}" | jq -r '.updates')
+	local index_url="${updates_url}/index.html"
+	echo "${index_url}"
+}
+
+parse_params "$@"
+
+echo "The selected country is: $country"
+
+echo "Creating data directory: ${data_dir} and subdirectory /updates"
+mkdir -p "${data_dir}/updates"
+
+download_urls=$(get_download_urls "${country}")
+updates_url=$(echo "${download_urls}" | jq -r '.updates')
+osm_download_url=$(dirname $(echo "${download_urls}" | jq -r '.pbf'))
+
+echo "OSM download URL: ${osm_download_url}"
+echo "Updates URL: ${updates_url}"
+latest_seq_nr=$(get_latest_replication_sequence_number "${updates_url}")
+echo "Latest sequence number: ${latest_seq_nr}"
+index_path=$(get_update_index_path_for_sequence_number "${latest_seq_nr}")
+index_url="${updates_url}/${index_path}"
+index=$(get_update_index_at_url "$index_url")
+first=$(get_first_sub_seq_nr_for_index "${index}")
+last=$(get_last_sub_seq_nr_for_index "${index}")
+
+download_updates "${index_url}" "${first}" "${last}"
+
+while [ "$first" -eq 0 ]; do
+	echo "Downloading from previous index"
+	seq_nr=$((seq_nr - 1))
+	index_path=$(get_update_index_path_for_sequence_number "${seq_nr}")
+	index_url="${updates_url}/${index_path}"
+	index=$(get_update_index_at_url "${index_url}")
+	first=$(get_first_sub_seq_nr_for_index "${index}")
+	last=$(get_last_sub_seq_nr_for_index "${index}")
+	download_updates "${index_url}" "${first}" "${last}"
+done
+
+# TODO: Download the first full extract for the region with a date that is later than the earliest data of the updates.
+
+earliest_timestamp=$(get_timestamp_from_state "${data_dir}/updates/${first}.state.txt")
+earliest_date=$(date -j -f "%Y-%m-%dT%H\:%M\:%SZ" "${earliest_timestamp}" +"%y%m%d")
+echo "Earliest timestamp: ${earliest_date}"
+
+download_dataset_later_than_date() {
+	local date="$1"
+	local filename=$(
+		curl -sSL "${osm_download_url}" |
+			xmllint --html --xpath '//table/tr/td[2]/a/text()' - |
+			grep -oE '^norway-[0-9]{6}\.osm\.pbf$' |
+			awk -F '[-.]' -v num="$date" '$2 >= num {print; exit}'
+	)
+	filepath="${osm_download_url}/${filename}"
+	echo "Downloading OSM file: ${filepath}"
+	curl -fLO --progress-bar "${filepath}" --output-dir "${data_dir}"
+}
+
+download_dataset_later_than_date "${earliest_date}"
+echo "Finished dowloading OSM data and updates for ${country} to ${data_dir}."
