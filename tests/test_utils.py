@@ -60,8 +60,3 @@ def test_to_prop_patch_message():
     assert got.prop_update.value == ["value2"]
     assert got.prop_insert.key == ["key4"]
     assert got.prop_insert.value == ["value4"]
-
-
-@pytest.mark.xfail(reason="Not implemented")
-def test_to_polygonpatch_message():
-    assert False

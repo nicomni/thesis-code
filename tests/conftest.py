@@ -148,33 +148,37 @@ def linestring_feature_2_v2(base_featdef, linestring_cbabac):
 
 
 @pytest.fixture
-def polygon_1():
-    return CreateGeometryFromWkt("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
+def polygon_abcabba():
+    return CreateGeometryFromWkt("POLYGON ((0 0, 1 1, 2 2, 0 0, 1 1, 1 1, 0 0))")
 
 
 @pytest.fixture
-def polygon_2():
-    return CreateGeometryFromWkt("POLYGON ((1 1, 1 2, 2 2, 2 1, 1 1))")
+def polygon_cbabac():
+    return CreateGeometryFromWkt("POLYGON ((2 2, 1 1, 0 0, 1 1, 0 0, 2 2))")
 
 
 @pytest.fixture
-def polygon_feature_1(
-    base_featdef: FeatureDefn, polygon_1: Geometry, timestamp_0: datetime
-):
+def polygon_feature_1(base_featdef: FeatureDefn, polygon_abcabba: Geometry):
+    timestamp = "2023-01-01T00:00:00"
     feat = Feature(base_featdef)
     feat.SetFID(1)
-    feat.SetField("osm_timestamp", timestamp_0.isoformat())
+    feat.SetField("osm_timestamp", timestamp)
     feat.SetField("osm_version", 1)
     feat.SetField("all_tags", json.dumps({"key1": "value1", "key2": "value2"}))
     feat.SetField("osm_id", 1)
     feat.SetField("osm_way_id", 1)
-    feat.SetGeometry(polygon_1)
+    feat.SetGeometry(polygon_abcabba)
     return feat
 
 
 @pytest.fixture
-def polygon_feature_2(base_featdef, polygon_2):
+def polygon_feature_1_v2(base_featdef: FeatureDefn, polygon_cbabac: Geometry):
+    timestamp = "2023-01-02T00:00:00"
     feat = Feature(base_featdef)
-    feat.SetFID(2)
-    feat.SetGeometry(polygon_2)
+    feat.SetFID(1)
+    feat.SetField("osm_timestamp", timestamp)
+    feat.SetField("osm_version", 2)
+    feat.SetField("all_tags", json.dumps({"key1": "value1_v2", "key3": "value3"}))
+    feat.SetField("osm_way_id", 1)
+    feat.SetGeometry(polygon_cbabac)
     return feat

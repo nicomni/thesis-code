@@ -143,14 +143,21 @@ class TestCreateModEvent:
         assert got.HasField("linestring_patch")
         assert got.HasField("prop_patch")
 
+    def test_create_mod_event_polygon(
+        self, polygon_feature_1: Feature, polygon_feature_1_v2: Feature
+    ):
+        got = events.modification_event(polygon_feature_1, polygon_feature_1_v2)
+
+        assert got.id == 1
+        assert got.version == 2
+        assert got.timestamp.ToDatetime().isoformat() == "2023-01-02T00:00:00"
+        assert got.HasField("polygon_patch")
+        assert got.HasField("prop_patch")
+
 
 class TestCreateDeletionEvent:
     def test_deletion_event_point(self, point_feature_1: Feature):
-        timestamp = datetime(2023, 1, 1, 0, 0, 0)
-        got = events.deletion_event(point_feature_1, timestamp)
+        got = events.deletion_event(point_feature_1)
         assert got.id == 1
-        assert (
-            got.timestamp.ToDatetime().isoformat()
-            == datetime(2023, 1, 1, 0, 0, 0).isoformat()
-        )
+        assert got.HasField("timestamp")
         assert got.version == 1
