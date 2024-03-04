@@ -14,6 +14,8 @@ _logger = logging.getLogger(__name__)
 
 FileName = str
 
+DEFAULT_OSM_CONFIG = "osmconf.ini"
+
 
 # Singleton
 class Config:
@@ -25,7 +27,9 @@ class Config:
         return cls._instance
 
     def __init__(
-        self, osm_conf_path: Optional[Path] = None, osm_max_tmpfile_size: int = 4000
+        self,
+        osm_conf_path: Optional[Path] = Path(DEFAULT_OSM_CONFIG),
+        osm_max_tmpfile_size: int = 4000,
     ):
         if not hasattr(self, "_initialized"):
             self._osm_conf_path = osm_conf_path
