@@ -2,7 +2,10 @@ from io import BufferedWriter
 import logging
 import warnings
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, cast
+
+from osgeo import ogr
+from thesis.events import creation_event
 
 from thesis.gisevents import CreationEvent, DeletionEvent, ModificationEvent
 
@@ -39,7 +42,16 @@ def write_events(*events: CreationEvent | ModificationEvent | DeletionEvent):
         _writer.write(event.SerializeToString())
 
 
-def init(config: Optional[dict] = None):
+def _initialize_from_data(gpkg: str):
+    _logger.info(f"Initializing event store from GPKG: {gpkg}")
+    with cast(ogr.DataSource, ogr.Open(gpkg)) as ds:
+        for i in range(ds.GetLayerCount()):
+            layer = ds[i]
+            events = map(lambda feature: creation_event(feature), layer)
+            write_events(*events)
+
+
+def init(config: Optional[dict] = None, gpkg: Optional[str] = None):
     global _initialized
     if _initialized:
         _logger.warning("Event store already initialized")
@@ -53,6 +65,8 @@ def init(config: Optional[dict] = None):
     global _writer
     _writer = open(_config["event_store_path"], "wb").__enter__()
     _initialized = True
+    if gpkg:
+        _initialize_from_data(gpkg)
 
 
 def teardown():
