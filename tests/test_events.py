@@ -115,14 +115,6 @@ class TestCreateModEvent:
         ):
             events._validate_modification_args(point_feature_2, linestring_feature_2_v1)
 
-    def test_validate_mismatching_version_raises(self, point_feature_1: Feature):
-        with pytest.raises(
-            ValueError,
-            match=r"Version number of the second feature argument must be "
-            + r"one more than the first argument's. Versions were \d+ and \d+",
-        ):
-            events.modification_event(point_feature_1, point_feature_1)
-
     def test_modification_event_point(
         self, point_feature_1: Feature, point_feature_1_v2: Feature
     ):

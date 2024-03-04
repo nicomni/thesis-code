@@ -78,14 +78,6 @@ def _validate_modification_args(prev_feature: ogr.Feature, curr_feature: ogr.Fea
         gtype1 = prev_feature.GetGeometryRef().GetGeometryName()
         gtype2 = curr_feature.GetGeometryRef().GetGeometryName()
         raise geodiff.GeometryTypeMismatchError(gtype1, gtype2)
-    # Check versions
-    prev_version = prev_feature.GetFieldAsInteger("osm_version")
-    curr_version = curr_feature.GetFieldAsInteger("osm_version")
-    if curr_version != prev_version + 1:
-        raise ValueError(
-            "Version number of the second feature argument must be one "
-            + f"more than the first argument's. Versions were {prev_version} and {curr_version}."
-        )
 
 
 def modification_event(
