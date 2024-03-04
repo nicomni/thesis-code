@@ -21,7 +21,7 @@ DEFAULT_OSM_CONFIG = "osmconf.ini"
 class Config:
     _instance = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -119,125 +119,9 @@ def get_all_features(gpkg_fpath: FileName, layer_name: str):
         return [cast(ogr.Feature, feat) for feat in layer]
 
 
-def _find_feature(
-    ds: ogr.DataSource, identifier: osm.ElementIdentifier
-) -> ogr.Feature | None:
-    """Find feature in data source."""
-    # If entity_type is node, search in points layer.
-    # If entity_type is way or relation, search in lines and linearrings layer.
-    # If feature is not found, return None.
-    match identifier.etype:
-        case osm.ElementType.NODE:
-            layer = cast(ogr.Layer, ds.GetLayerByName("points"))
-            point = cast(ogr.Feature | None, layer.GetFeature(identifier.id))
-            if point:
-                return point
-            else:
-                return None
-        case osm.ElementType.WAY | osm.ElementType.RELATION:
-            # Search in lines layer
-            layer = cast(ogr.Layer, ds.GetLayerByName("lines"))
-            line = cast(ogr.Feature | None, layer.GetFeature(identifier.id))
-            if line:
-                return line
-            # Search in linearrings layer
-            layer = cast(ogr.Layer, ds.GetLayerByName("linearrings"))
-            polygon = cast(ogr.Feature | None, layer.GetFeature(identifier.id))
-            if polygon:
-                return polygon
-
-
-_blacklist: list[osm.ElementIdentifier] = []
-
 Delete = tuple[Literal[osm.ChangeType.DELETE], ogr.Feature]
 Modify = tuple[Literal[osm.ChangeType.MODIFY], ogr.Feature, ogr.Feature]
 Create = tuple[Literal[osm.ChangeType.CREATE], ogr.Feature]
-
-
-def _get_union_of_fids(layer1: ogr.Layer, layer2: ogr.Layer) -> set[int]:
-    fids1 = set(map(lambda feat: cast(int, feat.GetFID()), layer1))
-    fids2 = set(map(lambda feat: cast(int, feat.GetFID()), layer2))
-    union_fids = fids1 | fids2
-    return union_fids
-
-
-def find_changes(prev_gpkg_path: str, curr_gpkg_path: str, osc_info: osm.OSCInfo):
-    """Find changes between two gpkg files.
-
-    Uses inforamtion from an OSC file to find the features that have changed.
-    """
-    result: list[Create | Modify | Delete] = []
-
-    with (
-        cast(ogr.DataSource, ogr.Open(curr_gpkg_path, driver="GPKG")) as curr_ds,
-        cast(ogr.DataSource, ogr.Open(prev_gpkg_path, driver="GPKG")) as prev_ds,
-    ):
-        _logger.info("Detecting changes.")
-        # FIXME:
-        # If a node that is referenced by a way or relation is updated with
-        # new coordinates, it is not sertain that the way or relation will be
-        # marked as "changed" in the OSC file. The same can be claimed about
-        # a way that is referenced by a relation.
-        # For this reason we need to iterate over all lines and polygons and
-        # check if they have been changed.
-
-        for change_info in osc_info:
-            identifier = change_info.element_identifier
-            if identifier in _blacklist:
-                _logger.info(
-                    f"Skipping {identifier.etype} with ID {identifier.id}. Found in blacklist."
-                )
-                continue
-            change: Create | Modify | Delete
-            if change_info.change_type is osm.ChangeType.CREATE:
-                _logger.info(
-                    f"Processing creation of {identifier.etype} with ID {identifier.id}"
-                )
-                feature = _find_feature(curr_ds, identifier)
-                if feature is None:
-                    _logger.warning(
-                        f"Could not find {identifier.etype.name} with ID {identifier.id} in gpkg file. Skipping diff and adding to blacklist."
-                    )
-                    _blacklist.append(identifier)
-                    continue
-                change = (change_info.change_type, feature)
-            elif change_info.change_type is osm.ChangeType.MODIFY:
-                _logger.info(
-                    f"Processing modification of {identifier.etype} with ID {identifier.id}"
-                )
-                feat1 = _find_feature(prev_ds, identifier)
-                feat2 = _find_feature(curr_ds, identifier)
-                if feat1 is None:
-                    _logger.warning(
-                        f"Could not find previous version of {identifier.etype.name} with ID {identifier.id} in gpkg file. Skipping diff and adding to blacklist."
-                    )
-                    _blacklist.append(identifier)
-                    continue
-                if feat2 is None:
-                    _logger.warning(
-                        f"Could not find current version of {identifier.etype.name} with ID {identifier.id} in gpkg file. Skipping diff and adding to blacklist."
-                    )
-                    _blacklist.append(identifier)
-                    continue
-                change = (change_info.change_type, feat1, feat2)
-            elif change_info.change_type is osm.ChangeType.DELETE:
-                _logger.info(
-                    f"Processing deletion of {identifier.etype} with ID {identifier.id}"
-                )
-                feature = _find_feature(prev_ds, identifier)
-                if feature is None:
-                    _logger.warning(
-                        f"Could not find {identifier.etype.name} with ID {identifier.id} in gpkg file."
-                    )
-                    _blacklist.append(identifier)
-                    continue
-                change = (change_info.change_type, feature)
-            else:
-                raise ValueError(f"Unexpected change type: {change_info.change_type}")
-
-            result.append(change)
-
-    return result
 
 
 def osmium_apply_changes(osm_fpath: str, osc_fpath: str) -> None:
