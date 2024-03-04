@@ -43,7 +43,9 @@ def creation_event(feature: ogr.Feature) -> gisevents.CreationEvent:
     # Properties (tags)
     all_tags_str: Optional[str] = feature.GetFieldAsString("all_tags")
     if all_tags_str:
-        all_tags: dict = json.loads(all_tags_str)
+        all_tags: dict = json.loads(
+            all_tags_str, strict=False, object_hook=props.as_string
+        )
         for key, val in all_tags.items():
             event.properties.key.append(key)
             event.properties.value.append(val)
@@ -126,10 +128,14 @@ def modification_event(
 
     # Check properties
     prev_props: props.Properties = json.loads(
-        prev_feature.GetFieldAsString("all_tags"), object_hook=props.as_string
+        prev_feature.GetFieldAsString("all_tags"),
+        strict=False,
+        object_hook=props.as_string,
     )
     curr_props: props.Properties = json.loads(
-        curr_feature.GetFieldAsString("all_tags"), object_hook=props.as_string
+        curr_feature.GetFieldAsString("all_tags"),
+        strict=False,
+        object_hook=props.as_string,
     )
     if prev_props != curr_props:
         prop_patch = props.diff(prev_props, curr_props)
