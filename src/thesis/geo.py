@@ -19,13 +19,6 @@ def has_field(feat_def: _ogr.FeatureDefn, field_name: str):
         return False
 
 
-def mp_has_single_polygon(geom: _ogr.Geometry) -> bool:
-    """Check if a multipolygon only has a single polygon."""
-    if not geom.GetGeometryType() == _ogr.wkbMultiPolygon:
-        raise ValueError("Input feature must be of type MultiPolygon.")
-    return geom.GetGeometryCount() == 1
-
-
 def polygon_has_holes(geom: _ogr.Geometry) -> bool:
     """Check if a polygon has holes."""
     if not geom.GetGeometryType() == _ogr.wkbPolygon:
