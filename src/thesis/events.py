@@ -162,22 +162,3 @@ def deletion_event(feature: ogr.Feature) -> gisevents.DeletionEvent:
     timestamp = datetime.now()
     event.timestamp.FromDatetime(timestamp)
     return event
-
-
-def initialize_eventstore_from_snapshot(gpkg_fpath: str):
-    """Initialize event store from gpkg file.
-
-    The gpkg file is considered to be the initial state of the data.
-    Thus, all events will be creation events.
-    """
-    _logger.info("Initializing event store")
-    events: list[gisevents.CreationEvent] = []
-    with ogr.Open(gpkg_fpath, driver="GPKG") as ds:
-        for layer_name in ["points", "lines", "linearrings"]:
-            layer = cast(ogr.Layer, ds.GetLayerByName(layer_name))
-            feature = cast(ogr.Feature | None, layer.GetNextFeature())
-            while feature:
-                event = creation_event(feature)
-                events.append(event)
-
-    event_store.write_events(*events)

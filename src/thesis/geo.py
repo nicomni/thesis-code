@@ -9,16 +9,6 @@ Coordinates = list[tuple[float, float]]
 IntCoords = list[tuple[int, int]]
 
 
-def has_field(feat_def: _ogr.FeatureDefn, field_name: str):
-    """Check if a FeatureDefn object has field with the specified name."""
-    for i in range(feat_def.GetFieldCount()):
-        field_defn = feat_def.GetFieldDefn(i)
-        if field_defn.GetName() == field_name:
-            return True
-    else:
-        return False
-
-
 def polygon_has_holes(geom: _ogr.Geometry) -> bool:
     """Check if a polygon has holes."""
     if not geom.GetGeometryType() == _ogr.wkbPolygon:
