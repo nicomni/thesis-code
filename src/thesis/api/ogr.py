@@ -40,7 +40,7 @@ class Config:
             finally:
                 if tmp_fd:
                     os.close(tmp_fd)
-            self._osm_out_tmp = osm_out_tmp
+            self._osm_out_tmp = Path(osm_out_tmp)
             self._initialized = True
         else:
             _logger.debug("Config already initialized. Skipping reinitialization.")
@@ -54,29 +54,30 @@ class Config:
         return self._osm_max_tmpfile_size
 
     @property
-    def osm_out_tmp(self) -> str:
+    def osm_out_tmp(self) -> Path:
         return self._osm_out_tmp
 
 
-def convert_osm_to_gpkg(osm_file_path: str, gpkg_out_path: str):
+def convert_osm_to_gpkg(osm_file_path: Path, gpkg_out_path: Path):
     """Convert osm file to gpkg file using `ogr2ogr`.
 
     Requires `ogr2ogr` to be in $PATH.
     """
-    if os.path.exists(gpkg_out_path):
-        _logger.error(f"The GPKG output path already exists: {gpkg_out_path}")
+    if gpkg_out_path.exists():
+        _logger.error(f"The GPKG output file already exists: {gpkg_out_path}")
         raise RuntimeError
-    _logger.info("Trying to convert OSM to GPKG")
     config = Config()
     OGR_CONFIG = {
         "OSM_MAX_TMPFILE_SIZE": str(config.osm_max_tmpfile_size),
     }
 
     if config.osm_conf_path:
-        OGR_CONFIG["OSM_CONFIG_FILE"] = str(config.osm_conf_path.resolve())
+        OGR_CONFIG["OSM_CONFIG_FILE"] = str(config.osm_conf_path)
 
     ogr2ogr_path = shutil.which("ogr2ogr")
-    command = [
+    if ogr2ogr_path is None:
+        raise RuntimeError("ogr2ogr not found in the PATH")
+    command: list[str] = [
         ogr2ogr_path,
         "-f",
         "GPKG",
@@ -84,8 +85,8 @@ def convert_osm_to_gpkg(osm_file_path: str, gpkg_out_path: str):
         "OSM",
         "-preserve_fid",
         "-overwrite",
-        gpkg_out_path,
-        osm_file_path,
+        str(gpkg_out_path),
+        str(osm_file_path),
     ]
     _logger.debug(
         f"Executing command: `{' '.join(command)}`. Using variables: {OGR_CONFIG}"
@@ -109,7 +110,6 @@ def convert_osm_to_gpkg(osm_file_path: str, gpkg_out_path: str):
             _logger.error(f"Error from ogr2ogr: \n\t{errs}")
         else:
             _logger.info("ogr2ogr ran without errors.")
-        _logger.info("Done with converting OSM to GPKG.")
 
 
 def get_all_features(gpkg_fpath: FileName, layer_name: str):
@@ -124,7 +124,7 @@ Modify = tuple[Literal[osm.ChangeType.MODIFY], ogr.Feature, ogr.Feature]
 Create = tuple[Literal[osm.ChangeType.CREATE], ogr.Feature]
 
 
-def osmium_apply_changes(osm_fpath: str, osc_fpath: str) -> None:
+def apply_changes(osm_fpath: Path, osc_fpath: Path) -> None:
     """Apply changes from osc file to osm file.
 
     Overwrites the input osm file.
@@ -133,8 +133,10 @@ def osmium_apply_changes(osm_fpath: str, osc_fpath: str) -> None:
     config = Config()
     osm_tmp_out = config.osm_out_tmp
 
-    def get_command():
+    def get_command() -> list[str]:
         osmium_cmd = shutil.which("osmium")
+        if osmium_cmd is None:
+            raise RuntimeError("osmium not found in path")
         return [
             osmium_cmd,
             "apply-changes",
@@ -142,16 +144,16 @@ def osmium_apply_changes(osm_fpath: str, osc_fpath: str) -> None:
             "pbf",
             "--overwrite",
             "-o",
-            osm_tmp_out,
-            osm_fpath,
-            osc_fpath,
+            str(osm_tmp_out),
+            str(osm_fpath),
+            str(osc_fpath),
         ]
 
     command = get_command()
     with subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ) as proc:
-        _logger.info(f"Applying change file with: `{' '.join(command)}`")
+        _logger.debug(f"Applying change file with: `{' '.join(command)}`")
         while proc.poll() is None:
             continue
         outb, errb = proc.communicate()
