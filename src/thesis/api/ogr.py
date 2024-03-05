@@ -58,7 +58,7 @@ class Config:
         return self._osm_out_tmp
 
 
-def osm2gpkg(osm_file_path: str, gpkg_out_path: str):
+def convert_osm_to_gpkg(osm_file_path: str, gpkg_out_path: str):
     """Convert osm file to gpkg file using `ogr2ogr`.
 
     Requires `ogr2ogr` to be in $PATH.
