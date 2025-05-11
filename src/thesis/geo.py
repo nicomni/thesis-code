@@ -16,6 +16,7 @@ def polygon_has_holes(geom: _ogr.Geometry) -> bool:
     return geom.GetGeometryCount() > 1
 
 
+# TODO: Move. Does not belong here.
 def validate_osm_feature(feat: _ogr.Feature):
     """Validate a feature created from OSM data."""
     # raises if timestamp is not valid iso8601

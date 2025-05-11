@@ -1,15 +1,14 @@
-# Fixtures are defined in conftest.py
-
 from datetime import datetime
 import json
 from osgeo import ogr
 
 import pytest
-from google.protobuf.timestamp_pb2 import Timestamp
 from osgeo.ogr import Feature
 
 import thesis.events as events
-from thesis import gisevents, geodiff
+from thesis import geodiff
+
+# Fixtures are defined in conftest.py
 
 
 class TestCreateCreationEvent:

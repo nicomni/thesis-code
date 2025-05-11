@@ -1,0 +1,29 @@
+#!/usr/bin/env zsh
+#
+# Extract OSM data
+
+set -euo pipefail
+
+parse_params() {
+	if [ $# -ne 2 ]; then
+		echo "Usage: $0 <bbox> <osm-file>"
+		exit 1
+	fi
+	bbox="$1"
+	osm_file="$2"
+	updates_dir="$(dirname "${osm_file}")/updates"
+}
+
+parse_params "$@"
+
+echo "OSM file: ${osm_file}"
+echo "Updates dir: ${updates_dir}"
+echo "Files: ${updates_dir}/*.osc"
+
+osmium extract --strategy smart --overwrite -b $bbox ${osm_file} -o out/extract/$(basename ${osm_file})
+
+counter=0
+for f in $updates_dir/*.osc; do
+	echo "Processing $(basename $f)"
+	osmium extract --strategy smart --overwrite -b $bbox -f osc $f -o out/extract/updates/$(basename $f)
+done
